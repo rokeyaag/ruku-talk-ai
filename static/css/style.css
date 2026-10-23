@@ -244,8 +244,8 @@ body {
 /* Avatar Viewport */
 .avatar-viewport {
     position: relative;
-    width: 250px;
-    height: 250px;
+    width: 270px;
+    height: 270px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -254,59 +254,75 @@ body {
 
 .avatar-halo {
     position: absolute;
-    width: 240px;
-    height: 240px;
+    width: 260px;
+    height: 260px;
     border-radius: 50%;
-    background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
-    animation: haloPulse 3s infinite ease-in-out;
+    background: radial-gradient(circle, rgba(0, 229, 153, 0.35) 0%, rgba(56, 189, 248, 0.15) 50%, transparent 72%);
+    animation: haloPulse 3.5s infinite ease-in-out;
+    filter: blur(8px);
 }
 
 @keyframes haloPulse {
-    0%, 100% { transform: scale(0.95); opacity: 0.5; }
-    50% { transform: scale(1.15); opacity: 0.9; }
+    0%, 100% { transform: scale(0.92); opacity: 0.55; }
+    50% { transform: scale(1.12); opacity: 0.95; }
 }
 
 .avatar-graphic {
     position: relative;
-    width: 210px;
-    height: 210px;
+    width: 220px;
+    height: 220px;
     border-radius: 50%;
-    border: 3px solid var(--primary);
+    border: 3.5px solid var(--primary);
     overflow: hidden;
-    background: #1e293b;
-    box-shadow: 0 0 30px var(--primary-glow);
-    transition: transform 0.3s;
+    background: #0f172a;
+    box-shadow: 0 0 35px var(--primary-glow), 0 10px 30px rgba(0, 0, 0, 0.6);
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 2;
 }
 
-.avatar-graphic.speaking {
-    animation: headBob 0.8s infinite ease-in-out alternate;
+.avatar-graphic:hover {
+    transform: scale(1.03);
+    border-color: var(--accent);
+    box-shadow: 0 0 45px rgba(56, 189, 248, 0.45), 0 15px 35px rgba(0, 0, 0, 0.7);
 }
 
-@keyframes headBob {
-    0% { transform: translateY(0px) rotate(0deg); }
-    100% { transform: translateY(-4px) rotate(1deg); }
-}
-
-.ruku-svg {
+.ruku-photo-avatar {
     width: 100%;
     height: 100%;
+    object-fit: cover;
+    object-position: center 15%;
+    display: block;
+    transition: transform 0.5s ease;
 }
 
-/* Eyes Blinking */
-.eye-pupil {
-    animation: eyeBlink 4s infinite;
-    transform-origin: center;
+.avatar-glow-overlay {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    box-shadow: inset 0 0 25px rgba(10, 15, 22, 0.65);
+    background: radial-gradient(circle at 50% 20%, rgba(255, 255, 255, 0.08), transparent 70%);
 }
 
-@keyframes eyeBlink {
-    0%, 94%, 98%, 100% { transform: scaleY(1); }
-    96% { transform: scaleY(0.1); }
+/* Speaking State Animation */
+.avatar-graphic.speaking {
+    border-color: #38BDF8;
+    animation: speakingPulse 1.2s infinite ease-in-out alternate;
 }
 
-/* Mouth Lip-sync */
-#rukuMouth {
-    transition: transform 0.1s ease;
-    transform-origin: 120px 160px;
+.avatar-graphic.speaking .ruku-photo-avatar {
+    transform: scale(1.05);
+}
+
+@keyframes speakingPulse {
+    0% {
+        box-shadow: 0 0 35px rgba(0, 229, 153, 0.6), 0 0 15px rgba(56, 189, 248, 0.5);
+        transform: scale(1.01);
+    }
+    100% {
+        box-shadow: 0 0 60px rgba(0, 229, 153, 0.9), 0 0 30px rgba(56, 189, 248, 0.8);
+        transform: scale(1.045);
+    }
 }
 
 .avatar-state-tag {

@@ -75,55 +75,8 @@
                     <div class="avatar-halo" id="avatarHalo"></div>
                     
                     <div class="avatar-graphic" id="avatarGraphic">
-                        <!-- Stylized SVG Talking Face with dynamic lip sync & blinking -->
-                        <svg viewBox="0 0 240 240" class="ruku-svg" id="rukuSvg">
-                            <defs>
-                                <linearGradient id="skinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%" stop-color="#FFE0BD"/>
-                                    <stop offset="100%" stop-color="#F2C49B"/>
-                                </linearGradient>
-                                <linearGradient id="hairGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                                    <stop offset="0%" stop-color="#2D1E18"/>
-                                    <stop offset="100%" stop-color="#140D0A"/>
-                                </linearGradient>
-                            </defs>
-                            
-                            <!-- Hair Back -->
-                            <path d="M 50 120 C 30 60, 210 60, 190 120 C 180 180, 200 230, 200 230 L 40 230 Z" fill="url(#hairGrad)" />
-                            
-                            <!-- Neck & Shoulders -->
-                            <path d="M 100 170 L 140 170 L 155 230 L 85 230 Z" fill="#F2C49B"/>
-                            
-                            <!-- Head Face -->
-                            <ellipse cx="120" cy="130" rx="60" ry="70" fill="url(#skinGrad)"/>
-                            
-                            <!-- Hair Front / Bangs -->
-                            <path d="M 60 110 C 60 70, 180 70, 180 110 C 160 85, 80 85, 60 110 Z" fill="url(#hairGrad)" />
-                            <path d="M 60 110 C 70 140, 60 180, 50 200 C 55 170, 75 125, 75 110 Z" fill="url(#hairGrad)" />
-                            <path d="M 180 110 C 170 140, 180 180, 190 200 C 185 170, 165 125, 165 110 Z" fill="url(#hairGrad)" />
-
-                            <!-- Eyes Left & Right (Blinking animated) -->
-                            <g id="leftEyeGroup">
-                                <ellipse cx="98" cy="125" rx="8" ry="10" fill="#2D1E18" class="eye-pupil"/>
-                                <circle cx="100" cy="122" r="3" fill="#FFFFFF"/>
-                                <path d="M 88 112 Q 98 106 108 112" stroke="#2D1E18" stroke-width="3" fill="none" stroke-linecap="round"/>
-                            </g>
-                            <g id="rightEyeGroup">
-                                <ellipse cx="142" cy="125" rx="8" ry="10" fill="#2D1E18" class="eye-pupil"/>
-                                <circle cx="144" cy="122" r="3" fill="#FFFFFF"/>
-                                <path d="M 132 112 Q 142 106 152 112" stroke="#2D1E18" stroke-width="3" fill="none" stroke-linecap="round"/>
-                            </g>
-
-                            <!-- Cute Blushing Cheeks -->
-                            <ellipse cx="85" cy="142" rx="10" ry="6" fill="#FF8A8A" opacity="0.45"/>
-                            <ellipse cx="155" cy="142" rx="10" ry="6" fill="#FF8A8A" opacity="0.45"/>
-
-                            <!-- Nose -->
-                            <path d="M 120 132 Q 123 140 118 143" stroke="#DCA27C" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-
-                            <!-- Mouth (Lip-sync animated via JS scale & height) -->
-                            <path id="rukuMouth" d="M 108 160 Q 120 166 132 160 Q 120 172 108 160 Z" fill="#D9534F" stroke="#B53B37" stroke-width="1.5"/>
-                        </svg>
+                        <img src="/static/img/ruku_avatar.jpg" alt="Ruku - AI English Tutor" class="ruku-photo-avatar" id="rukuPhoto">
+                        <div class="avatar-glow-overlay"></div>
                     </div>
 
                     <!-- Status Tag -->
