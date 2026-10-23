@@ -75,4 +75,11 @@ async def chat(request: ChatRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run(
+        "app:app",
+        host="127.0.0.1",
+        port=8000,
+        reload=True,
+        reload_dirs=[str(BASE_DIR / "core"), str(BASE_DIR / "templates"), str(BASE_DIR / "static")],
+        reload_excludes=["*.mp3", "assets/*"]
+    )
