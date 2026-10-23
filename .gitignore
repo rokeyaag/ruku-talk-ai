@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+assets/audio_temp/*
+!assets/audio_temp/.gitkeep
+.vscode/
+.idea/

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RukuTalk AI - Multilingual Talking Avatar English Tutor</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- PayPal SDK Sandbox -->
+    <script src="https://www.paypal.com/sdk/js?client-id=test&currency=USD"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Navigation Bar -->
+        <header class="navbar">
+            <div class="brand">
+                <div class="logo-badge">R</div>
+                <div>
+                    <h1 class="logo-title">RukuTalk <span class="ai-badge">AI</span></h1>
+                    <p class="logo-subtitle">Multilingual AI Speaking Companion</p>
+                </div>
+            </div>
+            
+            <div class="nav-controls">
+                <div class="language-picker">
+                    <span class="globe-icon">🌐</span>
+                    <select id="languageSelect" title="Select Practice Language">
+                        <option value="English" selected>🇺🇸 English (US)</option>
+                        <option value="English (UK)">🇬🇧 English (UK)</option>
+                        <option value="Bengali">🇧🇩 Bengali (বাংলা)</option>
+                        <option value="Spanish">🇪🇸 Spanish (Español)</option>
+                        <option value="French">🇫🇷 French (Français)</option>
+                        <option value="German">🇩🇪 German (Deutsch)</option>
+                        <option value="Arabic">🇸🇦 Arabic (العربية)</option>
+                        <option value="Hindi">🇮🇳 Hindi (हिन्दी)</option>
+                    </select>
+                </div>
+
+                <div class="streak-pill">
+                    <span class="fire-icon">🔥</span>
+                    <span id="streakCount">3 Days Streak</span>
+                </div>
+
+                <button class="pro-btn" id="proModalBtn">
+                    <span>💳 Upgrade to Pro</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <div class="main-workspace">
+            <!-- Left Sidebar: Curriculum Stages -->
+            <aside class="stages-sidebar">
+                <div class="sidebar-header">
+                    <h2>🗺️ Learning Journey</h2>
+                    <span class="level-indicator" id="currentLevelBadge">Level 1: Beginner</span>
+                </div>
+                
+                <div class="stages-list" id="stagesContainer">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </aside>
+
+            <!-- Center Stage: Ruku Avatar & Speaking Area -->
+            <main class="avatar-stage">
+                <div class="stage-info-banner">
+                    <span class="stage-tag" id="currentStageTag">Stage 1</span>
+                    <h2 id="currentStageTitle">Self Introduction</h2>
+                    <p id="currentStageGoal">Learn to introduce yourself and describe your hobbies.</p>
+                </div>
+
+                <!-- Avatar Container -->
+                <div class="avatar-viewport">
+                    <div class="avatar-halo" id="avatarHalo"></div>
+                    
+                    <div class="avatar-graphic" id="avatarGraphic">
+                        <!-- Stylized SVG Talking Face with dynamic lip sync & blinking -->
+                        <svg viewBox="0 0 240 240" class="ruku-svg" id="rukuSvg">
+                            <defs>
+                                <linearGradient id="skinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#FFE0BD"/>
+                                    <stop offset="100%" stop-color="#F2C49B"/>
+                                </linearGradient>
+                                <linearGradient id="hairGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" stop-color="#2D1E18"/>
+                                    <stop offset="100%" stop-color="#140D0A"/>
+                                </linearGradient>
+                            </defs>
+                            
+                            <!-- Hair Back -->
+                            <path d="M 50 120 C 30 60, 210 60, 190 120 C 180 180, 200 230, 200 230 L 40 230 Z" fill="url(#hairGrad)" />
+                            
+                            <!-- Neck & Shoulders -->
+                            <path d="M 100 170 L 140 170 L 155 230 L 85 230 Z" fill="#F2C49B"/>
+                            
+                            <!-- Head Face -->
+                            <ellipse cx="120" cy="130" rx="60" ry="70" fill="url(#skinGrad)"/>
+                            
+                            <!-- Hair Front / Bangs -->
+                            <path d="M 60 110 C 60 70, 180 70, 180 110 C 160 85, 80 85, 60 110 Z" fill="url(#hairGrad)" />
+                            <path d="M 60 110 C 70 140, 60 180, 50 200 C 55 170, 75 125, 75 110 Z" fill="url(#hairGrad)" />
+                            <path d="M 180 110 C 170 140, 180 180, 190 200 C 185 170, 165 125, 165 110 Z" fill="url(#hairGrad)" />
+
+                            <!-- Eyes Left & Right (Blinking animated) -->
+                            <g id="leftEyeGroup">
+                                <ellipse cx="98" cy="125" rx="8" ry="10" fill="#2D1E18" class="eye-pupil"/>
+                                <circle cx="100" cy="122" r="3" fill="#FFFFFF"/>
+                                <path d="M 88 112 Q 98 106 108 112" stroke="#2D1E18" stroke-width="3" fill="none" stroke-linecap="round"/>
+                            </g>
+                            <g id="rightEyeGroup">
+                                <ellipse cx="142" cy="125" rx="8" ry="10" fill="#2D1E18" class="eye-pupil"/>
+                                <circle cx="144" cy="122" r="3" fill="#FFFFFF"/>
+                                <path d="M 132 112 Q 142 106 152 112" stroke="#2D1E18" stroke-width="3" fill="none" stroke-linecap="round"/>
+                            </g>
+
+                            <!-- Cute Blushing Cheeks -->
+                            <ellipse cx="85" cy="142" rx="10" ry="6" fill="#FF8A8A" opacity="0.45"/>
+                            <ellipse cx="155" cy="142" rx="10" ry="6" fill="#FF8A8A" opacity="0.45"/>
+
+                            <!-- Nose -->
+                            <path d="M 120 132 Q 123 140 118 143" stroke="#DCA27C" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+
+                            <!-- Mouth (Lip-sync animated via JS scale & height) -->
+                            <path id="rukuMouth" d="M 108 160 Q 120 166 132 160 Q 120 172 108 160 Z" fill="#D9534F" stroke="#B53B37" stroke-width="1.5"/>
+                        </svg>
+                    </div>
+
+                    <!-- Status Tag -->
+                    <div class="avatar-state-tag" id="avatarState">
+                        <span class="status-dot"></span>
+                        <span id="stateText">Ruku is ready to listen</span>
+                    </div>
+                </div>
+
+                <!-- Voice Input Controls -->
+                <div class="voice-controls">
+                    <div class="audio-visualizer-bars" id="audioVisualizer">
+                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                    </div>
+
+                    <button class="mic-button" id="micBtn" title="Hold or Click to Speak">
+                        <span class="mic-icon">🎙️</span>
+                    </button>
+                    <p class="mic-hint" id="micHint">Click the microphone to speak with Ruku</p>
+
+                    <!-- Text fallback input -->
+                    <form class="text-fallback-form" id="chatForm">
+                        <input type="text" id="textInput" placeholder="Or type your message in English or your native language..." autocomplete="off">
+                        <button type="submit" id="sendBtn">Send</button>
+                    </form>
+                </div>
+            </main>
+
+            <!-- Right Sidebar: Feedback & Transcript -->
+            <aside class="feedback-sidebar">
+                <div class="sidebar-header">
+                    <h2>📝 Live Feedback & Scores</h2>
+                </div>
+
+                <!-- Real-time Scorecard -->
+                <div class="scorecard-grid">
+                    <div class="score-card">
+                        <span class="score-label">Fluency</span>
+                        <span class="score-value" id="fluencyScore">--%</span>
+                    </div>
+                    <div class="score-card">
+                        <span class="score-label">Accuracy</span>
+                        <span class="score-value" id="accuracyScore">--%</span>
+                    </div>
+                </div>
+
+                <!-- Grammar Correction Card -->
+                <div class="feedback-box grammar-box" id="grammarBox">
+                    <h3>💡 Grammar & Phrasing Coach</h3>
+                    <div id="grammarContent">
+                        <p class="empty-state">Speak to Ruku to see instant grammar improvements!</p>
+                    </div>
+                </div>
+
+                <!-- Smart Vocabulary Card -->
+                <div class="feedback-box vocab-box">
+                    <h3>📚 Vocabulary Booster</h3>
+                    <p id="vocabContent">Practice naturally to receive elevated words and idioms.</p>
+                </div>
+
+                <!-- Live Conversation Transcript -->
+                <div class="transcript-box">
+                    <h3>💬 Conversation Transcript</h3>
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="message ruku-message">
+                            <strong>Ruku:</strong> Hello! I am Ruku, your English speaking partner. Let's start simple! Can you tell me your name and where you are from?
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <!-- PayPal Subscription Modal -->
+        <div class="modal-backdrop" id="paypalModal">
+            <div class="modal-card">
+                <button class="close-modal" id="closeModalBtn">&times;</button>
+                <div class="modal-badge">✨ RukuTalk Pro</div>
+                <h2>Unlock Unlimited Speaking & IELTS Mock Tests</h2>
+                <p>Enjoy limitless conversation sessions, 12 full learning stages, and native fluency scorecards.</p>
+                
+                <div class="pricing-card">
+                    <span class="price">$4.99</span>
+                    <span class="period">/ month (Cancel anytime)</span>
+                </div>
+
+                <div class="modal-perks">
+                    <div>✔️ 24/7 Unlimited talking avatar time</div>
+                    <div>✔️ Full access to all 3 Levels (12 Stages)</div>
+                    <div>✔️ IELTS Speaking mock exams with band scoring</div>
+                    <div>✔️ Powered by PayPal Sandbox Instant Checkout</div>
+                </div>
+
+                <!-- PayPal Button Container -->
+                <div id="paypal-button-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden audio element for voice output -->
+    <audio id="rukuAudio" style="display:none;"></audio>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

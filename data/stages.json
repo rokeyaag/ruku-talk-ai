@@ -1,0 +1,109 @@
+{
+  "levels": [
+    {
+      "id": 1,
+      "name": "Level 1: Beginner (Foundations)",
+      "badge": "Confident Starter",
+      "stages": [
+        {
+          "id": 1,
+          "title": "Stage 1: Self Introduction",
+          "description": "Learn to introduce yourself, your job, where you live, and your hobbies.",
+          "initial_ruku_message": "Hello! I am Ruku, your English speaking partner. Let's start simple! Can you tell me your name and where you are from?",
+          "topics": ["Name", "City", "Profession", "Basic Hobbies"]
+        },
+        {
+          "id": 2,
+          "title": "Stage 2: Daily Routine",
+          "description": "Describe what you do from morning to night using present simple tense.",
+          "initial_ruku_message": "Welcome to Stage 2! Tell me about your typical morning. What time do you wake up and what is the first thing you do?",
+          "topics": ["Morning Routine", "Work/Study Hours", "Evening Relaxation"]
+        },
+        {
+          "id": 3,
+          "title": "Stage 3: Ordering Food at a Cafe",
+          "description": "Practice ordering breakfast, coffee, and asking for the bill politely.",
+          "initial_ruku_message": "Welcome to Ruku's Cafe! I am your barista today. What can I get started for you?",
+          "topics": ["Coffee/Tea Order", "Food Preferences", "Payment & Bill"]
+        },
+        {
+          "id": 4,
+          "title": "Stage 4: Asking for Directions",
+          "description": "Learn how to ask for and give directions in a new city.",
+          "initial_ruku_message": "Excuse me! Imagine you are lost in London. Ask me how to get to the nearest metro station or museum.",
+          "topics": ["Turning Left/Right", "Distance", "Landmarks"]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Level 2: Intermediate (Confidence & Flow)",
+      "badge": "Fluent Communicator",
+      "stages": [
+        {
+          "id": 5,
+          "title": "Stage 5: Past Travel Memories",
+          "description": "Practice past tense by sharing an unforgettable trip or vacation.",
+          "initial_ruku_message": "I love traveling! What is the most memorable trip or city you have visited, and why did you like it?",
+          "topics": ["Past Tense", "Travel Experiences", "Sightseeing"]
+        },
+        {
+          "id": 6,
+          "title": "Stage 6: Expressing Opinions & Hobbies",
+          "description": "Share your thoughts on movies, books, music, or current trends.",
+          "initial_ruku_message": "What kind of movies or shows do you enjoy watching in your free time? Tell me about your favorite one!",
+          "topics": ["Agree/Disagree", "Movie Reviews", "Personal Taste"]
+        },
+        {
+          "id": 7,
+          "title": "Stage 7: Shopping & Polite Bargaining",
+          "description": "Negotiate prices, check clothing sizes, and ask for discounts.",
+          "initial_ruku_message": "Hello, welcome to our store! Are you looking for anything specific today?",
+          "topics": ["Size/Fit", "Discounts", "Exchanges"]
+        },
+        {
+          "id": 8,
+          "title": "Stage 8: Friends & Workplace Chat",
+          "description": "Casual watercooler conversations and catching up with friends.",
+          "initial_ruku_message": "Long time no see! How has work and family been lately? Any exciting news?",
+          "topics": ["Small Talk", "Catching Up", "Empathy & Reactions"]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Level 3: Advanced (Professional & Academic)",
+      "badge": "Master Speaker",
+      "stages": [
+        {
+          "id": 9,
+          "title": "Stage 9: Job Interview Simulation",
+          "description": "Face realistic HR questions: strengths, weaknesses, and behavioral scenarios.",
+          "initial_ruku_message": "Good morning. Thank you for attending this interview. To begin, could you walk me through your professional background?",
+          "topics": ["Self Pitch", "Problem Solving", "Salary Expectations"]
+        },
+        {
+          "id": 10,
+          "title": "Stage 10: Business Meeting & Presentation",
+          "description": "Pitch a project idea, lead a discussion, and handle critical feedback.",
+          "initial_ruku_message": "Welcome team. Let's discuss our quarterly project goals. How would you propose we improve user engagement this month?",
+          "topics": ["Formal Vocabulary", "Proposing Ideas", "Counter-arguments"]
+        },
+        {
+          "id": 11,
+          "title": "Stage 11: Debate & Complex Discussion",
+          "description": "Engage in nuanced discussions about AI, education, and modern society.",
+          "initial_ruku_message": "Do you believe Artificial Intelligence will replace human jobs, or create new opportunities? Share your viewpoint.",
+          "topics": ["Nuanced Logic", "Pros & Cons", "Persuasive Speaking"]
+        },
+        {
+          "id": 12,
+          "title": "Stage 12: IELTS Speaking Mock Exam",
+          "description": "Full mock test format covering Part 1, Part 2 (Cue card), and Part 3 analysis.",
+          "initial_ruku_message": "This is your IELTS Speaking Mock Test. In Part 1, I will ask some general questions about yourself. Let's begin: Do you work or study?",
+          "topics": ["Part 1 Familiar Topics", "Part 2 Monologue", "Part 3 Analytical Debate"]
+        }
+      ]
+    }
+  ]
+}
