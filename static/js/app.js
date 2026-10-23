@@ -103,38 +103,68 @@ function selectStage(stage, levelName) {
     speakRukuText(stage.initial_ruku_message);
 }
 
-// 2. Speech Recognition Setup (Web Speech API)
+// 2. Speech Recognition Setup (Web Speech API + MediaDevices)
+let micStream = null;
+
 function initSpeechRecognition() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
         recognition = new SpeechRecognition();
         recognition.continuous = false;
-        recognition.interimResults = false;
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
         recognition.lang = getLanguageCode(currentLanguage);
 
         recognition.onstart = () => {
             isRecording = true;
             micBtn.classList.add("recording");
             audioVisualizer.classList.add("active");
-            micHint.innerText = "Listening... Speak now";
+            micHint.innerHTML = `<span style="color:var(--primary); font-weight:600;">🎙️ Listening... Speak now in ${currentLanguage}</span>`;
             stateText.innerText = "Ruku is listening carefully...";
         };
 
         recognition.onresult = (event) => {
-            const transcript = event.results[0][0].transcript;
-            handleUserMessage(transcript);
+            let interimTranscript = '';
+            let finalTranscript = '';
+
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    finalTranscript += event.results[i][0].transcript;
+                } else {
+                    interimTranscript += event.results[i][0].transcript;
+                }
+            }
+
+            if (interimTranscript) {
+                micHint.innerHTML = `<span style="color:var(--accent); font-weight:500;">Hearing: "${interimTranscript}"...</span>`;
+            }
+
+            if (finalTranscript && finalTranscript.trim()) {
+                micHint.innerText = `Recognized: "${finalTranscript.trim()}"`;
+                handleUserMessage(finalTranscript.trim());
+            }
         };
 
         recognition.onerror = (event) => {
-            console.warn("Speech error:", event.error);
+            console.warn("SpeechRecognition error:", event.error);
             stopRecording();
+
+            if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                micHint.innerHTML = `<span style="color:var(--danger); font-weight:700;">⚠️ Mic Blocked!</span> Click the 🔒 lock icon in the address bar & allow Microphone.`;
+            } else if (event.error === 'network') {
+                micHint.innerHTML = `<span style="color:var(--warning); font-weight:700;">⚠️ Voice Service blocked.</span> In Brave Browser, enable Google Speech Services in settings (or type your message below).`;
+            } else if (event.error === 'no-speech') {
+                micHint.innerText = "No voice detected. Click the mic again and speak clearly!";
+            } else {
+                micHint.innerText = `Voice error (${event.error}). You can also type below!`;
+            }
         };
 
         recognition.onend = () => {
             stopRecording();
         };
     } else {
-        micHint.innerText = "Speech API not supported in this browser. Use text input below.";
+        micHint.innerHTML = `<span style="color:var(--warning);">Speech API not supported in this browser. Use text input below.</span>`;
     }
 }
 
@@ -152,12 +182,50 @@ function getLanguageCode(lang) {
     return map[lang] || "en-US";
 }
 
+function setupMicrophoneVisualizer(stream) {
+    try {
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioContext.state === 'suspended') {
+            audioContext.resume();
+        }
+        const source = audioContext.createMediaStreamSource(stream);
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 64;
+        source.connect(analyser);
+
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        const bars = audioVisualizer.querySelectorAll(".bar");
+
+        function updateVisualizer() {
+            if (!isRecording) return;
+            analyser.getByteFrequencyData(dataArray);
+            bars.forEach((bar, index) => {
+                const val = dataArray[index % dataArray.length];
+                const height = Math.max(4, (val / 255) * 28);
+                bar.style.height = `${height}px`;
+            });
+            requestAnimationFrame(updateVisualizer);
+        }
+        updateVisualizer();
+    } catch (e) {
+        console.warn("Audio visualizer error:", e);
+    }
+}
+
 function stopRecording() {
     isRecording = false;
     micBtn.classList.remove("recording");
     audioVisualizer.classList.remove("active");
-    micHint.innerText = "Click the microphone to speak with Ruku";
+    if (!micHint.innerHTML.includes("⚠️") && !micHint.innerHTML.includes("Hearing:")) {
+        micHint.innerText = "Click the microphone to speak with Ruku";
+    }
     stateText.innerText = "Ruku is ready to listen";
+    if (micStream) {
+        micStream.getTracks().forEach(track => track.stop());
+        micStream = null;
+    }
 }
 
 // 3. User Message Handling & Server Communication
@@ -295,13 +363,44 @@ function stopLipSync() {
 
 // 5. Event Listeners & Modals
 function setupEventListeners() {
-    micBtn.addEventListener("click", () => {
-        if (!recognition) return;
+    micBtn.addEventListener("click", async () => {
         if (isRecording) {
-            recognition.stop();
+            if (recognition) recognition.stop();
+            stopRecording();
+            return;
+        }
+
+        // 1. Explicitly prompt user for Microphone permission using getUserMedia
+        try {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                setupMicrophoneVisualizer(micStream);
+            }
+        } catch (micErr) {
+            console.warn("Microphone access error:", micErr);
+            micHint.innerHTML = `<span style="color:var(--danger); font-weight:700;">⚠️ Microphone permission denied!</span> Please allow microphone access in your browser address bar.`;
+            return;
+        }
+
+        // 2. Start Speech Recognition
+        if (recognition) {
+            try {
+                recognition.lang = getLanguageCode(currentLanguage);
+                recognition.start();
+            } catch (err) {
+                console.warn("Could not start recognition directly:", err);
+                try {
+                    recognition.abort();
+                    setTimeout(() => {
+                        recognition.lang = getLanguageCode(currentLanguage);
+                        recognition.start();
+                    }, 200);
+                } catch (e2) {
+                    console.error("Failed to restart speech recognition:", e2);
+                }
+            }
         } else {
-            recognition.lang = getLanguageCode(currentLanguage);
-            recognition.start();
+            micHint.innerHTML = `<span style="color:var(--warning);">Speech recognition unavailable in this browser. Please use the text input below.</span>`;
         }
     });
 
