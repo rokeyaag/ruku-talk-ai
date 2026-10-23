@@ -36,7 +36,7 @@ class ChatRequest(BaseModel):
 @app.get("/")
 async def index(request: Request):
     """Render the main web interface."""
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="index.html")
 
 @app.get("/api/stages")
 async def get_stages():
@@ -80,6 +80,6 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=8000,
         reload=True,
-        reload_dirs=[str(BASE_DIR / "core"), str(BASE_DIR / "templates"), str(BASE_DIR / "static")],
-        reload_excludes=["*.mp3", "assets/*"]
+        reload_dirs=[str(BASE_DIR)],
+        reload_excludes=["assets/*", "*.mp3", ".git/*"]
     )
