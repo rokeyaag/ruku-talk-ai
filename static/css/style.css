@@ -244,33 +244,39 @@ body {
 /* Avatar Viewport */
 .avatar-viewport {
     position: relative;
-    width: 270px;
-    height: 270px;
+    width: 260px;
+    height: 260px;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    margin: auto 0;
+    margin: 18px auto;
 }
 
 .avatar-halo {
     position: absolute;
-    width: 260px;
-    height: 260px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 250px;
+    height: 250px;
     border-radius: 50%;
     background: radial-gradient(circle, rgba(0, 229, 153, 0.35) 0%, rgba(56, 189, 248, 0.15) 50%, transparent 72%);
     animation: haloPulse 3.5s infinite ease-in-out;
     filter: blur(8px);
+    pointer-events: none;
+    z-index: 1;
 }
 
 @keyframes haloPulse {
-    0%, 100% { transform: scale(0.92); opacity: 0.55; }
-    50% { transform: scale(1.12); opacity: 0.95; }
+    0%, 100% { transform: translate(-50%, -50%) scale(0.94); opacity: 0.55; }
+    50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.95; }
 }
 
 .avatar-graphic {
     position: relative;
-    width: 220px;
-    height: 220px;
+    width: 210px;
+    height: 210px;
     border-radius: 50%;
     border: 3.5px solid var(--primary);
     overflow: hidden;
@@ -278,6 +284,9 @@ body {
     box-shadow: 0 0 35px var(--primary-glow), 0 10px 30px rgba(0, 0, 0, 0.6);
     transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .avatar-graphic:hover {
@@ -328,7 +337,9 @@ body {
 
 .avatar-state-tag {
     position: absolute;
-    bottom: -15px;
+    bottom: -16px;
+    left: 50%;
+    transform: translateX(-50%);
     background: var(--bg-surface);
     border: 1px solid var(--border-color);
     padding: 6px 14px;
@@ -338,6 +349,9 @@ body {
     gap: 8px;
     font-size: 12px;
     font-weight: 500;
+    white-space: nowrap;
+    z-index: 3;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
 }
 
 .status-dot {
