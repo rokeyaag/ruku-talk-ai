@@ -33,8 +33,8 @@ class RukuVoiceEngine:
         try:
             import edge_tts
             communicate = edge_tts.Communicate(text, voice)
-            await communicate.save(filepath)
+            await asyncio.wait_for(communicate.save(filepath), timeout=3.5)
             return f"/assets/audio_temp/{filename}"
         except Exception as e:
-            print(f"[Warning] edge-tts error: {e}. Falling back to browser TTS.")
+            print(f"[Notice] edge-tts fallback triggered ({e}). Using browser neural speech synthesis.")
             return ""

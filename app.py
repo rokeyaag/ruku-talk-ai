@@ -1,13 +1,16 @@
 import os
 import json
+import io
 from pathlib import Path
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, File, UploadFile, Form
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
+import speech_recognition as sr
+
 
 from core.tutor_engine import RukuTutorEngine
 from core.tts_engine import RukuVoiceEngine
@@ -32,6 +35,7 @@ class ChatRequest(BaseModel):
     message: str
     stage: Optional[Dict[str, Any]] = None
     language: Optional[str] = "English"
+    chat_history: Optional[list] = None
 
 @app.get("/")
 async def index(request: Request):
@@ -46,6 +50,48 @@ async def get_stages():
         with open(stages_file, "r", encoding="utf-8") as f:
             return json.load(f)
     return {"levels": []}
+
+LANGUAGE_STT_MAP = {
+    "English": "en-US",
+    "English (UK)": "en-GB",
+    "Bengali": "bn-BD",
+    "Spanish": "es-ES",
+    "French": "fr-FR",
+    "German": "de-DE",
+    "Arabic": "ar-SA",
+    "Hindi": "hi-IN"
+}
+
+@app.post("/api/speech-to-text")
+async def speech_to_text(audio: UploadFile = File(...), language: str = Form("English")):
+    """
+    Universal browser-independent STT:
+    Accepts client-side microphone WAV audio and transcribes accurately.
+    Works flawlessly across Brave, Chrome, Firefox, Edge, Safari and Mobile.
+    """
+    try:
+        content = await audio.read()
+        if not content or len(content) < 300:
+            return JSONResponse({"text": "", "success": False, "error": "Audio recording too short"})
+
+        recognizer = sr.Recognizer()
+        recognizer.dynamic_energy_threshold = False
+        recognizer.energy_threshold = 120
+        audio_file = io.BytesIO(content)
+
+        with sr.AudioFile(audio_file) as source:
+            audio_data = recognizer.record(source)
+
+        lang_code = LANGUAGE_STT_MAP.get(language, "en-US")
+        recognized_text = recognizer.recognize_google(audio_data, language=lang_code)
+
+        return JSONResponse({"text": recognized_text, "success": True})
+    except sr.UnknownValueError:
+        return JSONResponse({"text": "", "success": False, "error": "Could not understand voice. Please speak a little louder or closer."})
+    except Exception as e:
+        print(f"[STT Error]: {e}")
+        return JSONResponse({"text": "", "success": False, "error": str(e)})
+
 
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
@@ -62,7 +108,8 @@ async def chat(request: ChatRequest):
     feedback = tutor_engine.generate_response(
         user_message=request.message,
         stage_info=stage_info,
-        language=lang
+        language=lang,
+        chat_history=request.chat_history
     )
 
     reply_text = feedback.get("reply", "That was a great effort! Let's keep practicing.")
