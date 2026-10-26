@@ -86,11 +86,12 @@ Do NOT output markdown backticks around the JSON. Output pure raw JSON.
         client = self._get_client()
         if client:
             candidate_models = [
-                os.getenv("GEMINI_MODEL", "gemini-3.5-flash").strip(),
-                "gemini-3.5-flash",
+                os.getenv("GEMINI_MODEL", "gemini-flash-lite-latest").strip(),
+                "gemini-flash-lite-latest",
                 "gemini-3.8-flash",
                 "gemini-flash-latest",
-                "gemini-3.6-flash",
+                "gemini-3.5-flash-lite",
+                "gemini-3.5-flash",
                 "gemini-3.7-flash"
             ]
             valid_models = []
