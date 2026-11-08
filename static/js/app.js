@@ -4,7 +4,6 @@ let stagesData = [];
 let currentStage = null;
 let currentLanguage = "English";
 let isRecording = false;
-let recognition = null;
 let audioContext = null;
 let analyser = null;
 let animFrameId = null;
@@ -37,10 +36,26 @@ const closeModalBtn = document.getElementById("closeModalBtn");
 
 // 1. Initialize App & Fetch Stages
 document.addEventListener("DOMContentLoaded", async () => {
-    initSpeechRecognition();
     await loadStages();
     setupEventListeners();
     setupPayPal();
+
+    // Unlock audio context on the first user interaction anywhere
+    const unlockOnFirstClick = () => {
+        unlockAudio();
+        document.removeEventListener("click", unlockOnFirstClick);
+        document.removeEventListener("keydown", unlockOnFirstClick);
+    };
+    document.addEventListener("click", unlockOnFirstClick);
+    document.addEventListener("keydown", unlockOnFirstClick);
+
+    // Warm up speech synthesis voices
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.getVoices();
+        window.speechSynthesis.onvoiceschanged = () => {
+            window.speechSynthesis.getVoices();
+        };
+    }
 });
 
 async function loadStages() {
@@ -84,7 +99,40 @@ function renderStages() {
     });
 }
 
-function selectStage(stage, levelName) {
+function getStageStorageKey(stageId) {
+    return `ruku_conv_stage_${stageId}`;
+}
+
+function saveStageHistory(stageId) {
+    if (!stageId) return;
+    try {
+        localStorage.setItem(getStageStorageKey(stageId), JSON.stringify(conversationHistory));
+    } catch (e) {
+        console.warn("Storage save notice:", e);
+    }
+}
+
+function loadStageHistory(stageId) {
+    if (!stageId) return null;
+    try {
+        const raw = localStorage.getItem(getStageStorageKey(stageId));
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+async function clearStageHistory(stageId) {
+    if (!stageId) return;
+    try {
+        localStorage.removeItem(getStageStorageKey(stageId));
+        await fetch(`/api/chat-history?stage_id=${stageId}`, { method: "DELETE" });
+    } catch (e) {
+        console.warn("Clear history error:", e);
+    }
+}
+
+async function selectStage(stage, levelName) {
     currentStage = stage;
     document.querySelectorAll(".stage-item").forEach(el => el.classList.remove("active"));
     const activeBtn = document.getElementById(`stage-btn-${stage.id}`);
@@ -95,93 +143,95 @@ function selectStage(stage, levelName) {
     currentStageTag.innerText = `Stage ${stage.id}`;
     if (levelName) currentLevelBadge.innerText = levelName;
 
-    // Reset feedback and conversation history for new stage
-    conversationHistory = [];
-    grammarContent.innerHTML = `<p class="empty-state">Starting ${stage.title}. Speak with Ruku!</p>`;
-    vocabContent.innerText = `Focus topics: ${stage.topics.join(", ")}`;
-    
-    // Add Ruku's greeting to chat and history
-    if (stage.initial_ruku_message) {
-        conversationHistory.push({ role: "ruku", text: stage.initial_ruku_message });
+    // Clear chat display for stage switch
+    chatMessages.innerHTML = "";
+
+    // 100% Persistent Memory: Load previous conversation from Server first, fallback to localStorage
+    let history = [];
+    try {
+        const res = await fetch(`/api/chat-history?stage_id=${stage.id}`);
+        const data = await res.json();
+        if (data.history && Array.isArray(data.history) && data.history.length > 0) {
+            history = data.history;
+        }
+    } catch (e) {
+        console.warn("Backend chat history load notice:", e);
     }
-    appendMessage("Ruku", stage.initial_ruku_message, "ruku-message");
-    speakRukuText(stage.initial_ruku_message);
-}
 
-// 2. Speech & Audio Recording Setup
-let micStream = null;
-let wavAudioContext = null;
-let scriptProcessor = null;
-let micSource = null;
-let recordedBuffers = [];
-let recordingSampleRate = 16000;
-let isAudioRecording = false;
-let autoStopTimer = null;
-let isSubmittingSpeech = false;
-let hasVoiceSpoken = false;
-let silenceStartTimestamp = null;
+    if (!history || history.length === 0) {
+        const saved = loadStageHistory(stage.id);
+        if (saved && Array.isArray(saved) && saved.length > 0) {
+            history = saved;
+        }
+    }
 
-function initSpeechRecognition() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-        try {
-            recognition = new SpeechRecognition();
-            recognition.continuous = false;
-            recognition.interimResults = true;
-            recognition.maxAlternatives = 1;
-            recognition.lang = getLanguageCode(currentLanguage);
+    if (history && history.length > 0) {
+        conversationHistory = [];
+        let latestTurn = null;
 
-            recognition.onstart = () => {
-                isRecording = true;
-                micBtn.classList.add("recording");
-                audioVisualizer.classList.add("active");
-                micHint.innerHTML = `<span style="color:var(--primary); font-weight:600;">🎙️ Listening... Click mic again when done!</span>`;
-                stateText.innerText = "Ruku is listening carefully...";
-            };
-
-            recognition.onresult = (event) => {
-                let interimTranscript = '';
-                let finalTranscript = '';
-
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        finalTranscript += event.results[i][0].transcript;
-                    } else {
-                        interimTranscript += event.results[i][0].transcript;
-                    }
+        history.forEach(item => {
+            if (item.user) {
+                // Backend turn format: { user, ruku, fluency_score, accuracy_score, has_mistake, correction, ... }
+                appendMessage("You", item.user, "user-message", null, item);
+                conversationHistory.push({
+                    role: "user",
+                    text: item.user,
+                    has_mistake: item.has_mistake,
+                    correction: item.correction
+                });
+                if (item.ruku) {
+                    appendMessage("Ruku", item.ruku, "ruku-message", item.audio_url || null);
+                    conversationHistory.push({ role: "ruku", text: item.ruku, audio_url: item.audio_url || null });
+                    latestTurn = item;
                 }
+            } else {
+                // Client format: { role, text, ... }
+                const isRuku = item.role === "ruku" || item.sender === "Ruku";
+                appendMessage(
+                    isRuku ? "Ruku" : "You",
+                    item.text || item.message || "",
+                    isRuku ? "ruku-message" : "user-message",
+                    item.audio_url || null,
+                    item
+                );
+                conversationHistory.push(item);
+                if (isRuku) latestTurn = item;
+            }
+        });
 
-                if (interimTranscript) {
-                    micHint.innerHTML = `<span style="color:var(--accent); font-weight:500;">Hearing: "${interimTranscript}"...</span>`;
-                }
-
-                if (finalTranscript && finalTranscript.trim()) {
-                    if (!isSubmittingSpeech) {
-                        isSubmittingSpeech = true;
-                        micHint.innerText = `Recognized: "${finalTranscript.trim()}"`;
-                        stopRecording(false);
-                        handleUserMessage(finalTranscript.trim());
-                    }
-                }
-            };
-
-            recognition.onerror = (event) => {
-                console.warn("Browser SpeechRecognition warning:", event.error);
-                // In Brave/Firefox, webkitSpeechRecognition often fails with 'network' or 'not-allowed'.
-                // We do NOT stop recording here because our universal backend audio recorder will handle it seamlessly!
-                if (event.error === 'not-allowed') {
-                    micHint.innerHTML = `<span style="color:var(--danger); font-weight:700;">⚠️ Mic Blocked!</span> Click the 🔒 lock icon in the URL bar to allow microphone.`;
-                }
-            };
-
-            recognition.onend = () => {
-                // If speech recognition ended but audio recorder is still active, audio recorder handles transcription
-            };
-        } catch (e) {
-            console.warn("SpeechRecognition init exception:", e);
+        if (latestTurn) {
+            updateScores(latestTurn.fluency_score, latestTurn.accuracy_score);
+            updateGrammarFeedback(latestTurn);
+            if (latestTurn.vocabulary_tip) {
+                vocabContent.innerText = latestTurn.vocabulary_tip;
+            }
+        }
+        saveStageHistory(stage.id);
+    } else {
+        // Start fresh for this stage
+        conversationHistory = [];
+        grammarContent.innerHTML = `<p class="empty-state">Starting ${stage.title}. Speak with Ruku!</p>`;
+        vocabContent.innerText = `Focus topics: ${stage.topics.join(", ")}`;
+        
+        // Add Ruku's greeting to chat and history
+        if (stage.initial_ruku_message) {
+            conversationHistory.push({ role: "ruku", text: stage.initial_ruku_message });
+            appendMessage("Ruku", stage.initial_ruku_message, "ruku-message");
+            saveStageHistory(stage.id);
+            speakRukuText(stage.initial_ruku_message);
         }
     }
 }
+
+// 2. Hardware-Accelerated Audio Recording & Voice Activity Detection (VAD)
+let mediaRecorder = null;
+let audioChunks = [];
+let micStream = null;
+let vadAnimFrame = null;
+let autoStopTimer = null;
+let isSubmittingSpeech = false;
+let speechEverDetected = false;
+let silenceStartTimestamp = null;
 
 function getLanguageCode(lang) {
     const map = {
@@ -197,113 +247,168 @@ function getLanguageCode(lang) {
     return map[lang] || "en-US";
 }
 
-function startWavRecording(stream) {
-    recordedBuffers = [];
-    isAudioRecording = true;
-    hasVoiceSpoken = false;
-    silenceStartTimestamp = null;
-    isSubmittingSpeech = false;
+async function startRecording() {
+    if (isRecording || isSubmittingSpeech) return;
+
+    unlockAudio();
 
     try {
-        if (!wavAudioContext || wavAudioContext.state === 'closed') {
-            wavAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            micHint.innerHTML = `<span style="color:var(--danger);">Microphone not supported on this browser.</span>`;
+            return;
         }
-        if (wavAudioContext.state === 'suspended') {
-            wavAudioContext.resume();
-        }
-        recordingSampleRate = wavAudioContext.sampleRate;
-        micSource = wavAudioContext.createMediaStreamSource(stream);
-        
-        analyser = wavAudioContext.createAnalyser();
-        analyser.fftSize = 64;
-        micSource.connect(analyser);
 
-        // Process audio in 4096-sample chunks
-        scriptProcessor = wavAudioContext.createScriptProcessor(4096, 1, 1);
-        const SILENCE_TIMEOUT_MS = 1300; // 1.3 seconds of pause ends speech automatically
-        const VOICE_VOLUME_THRESHOLD = 0.016;
-
-        scriptProcessor.onaudioprocess = (e) => {
-            if (!isAudioRecording) return;
-            const inputData = e.inputBuffer.getChannelData(0);
-            recordedBuffers.push(new Float32Array(inputData));
-
-            // Calculate RMS volume for Voice Activity Detection (VAD)
-            let sum = 0;
-            for (let i = 0; i < inputData.length; i++) {
-                sum += inputData[i] * inputData[i];
-            }
-            const rms = Math.sqrt(sum / inputData.length);
-
-            if (rms > VOICE_VOLUME_THRESHOLD) {
-                hasVoiceSpoken = true;
-                silenceStartTimestamp = null;
-                micHint.innerHTML = `<span style="color:var(--primary); font-weight:600;">🎙️ Hearing you speak...</span>`;
-            } else if (hasVoiceSpoken) {
-                const now = performance.now();
-                if (!silenceStartTimestamp) {
-                    silenceStartTimestamp = now;
-                } else if (now - silenceStartTimestamp > SILENCE_TIMEOUT_MS) {
-                    // Automatically stop & send audio immediately without waiting 12s!
-                    isAudioRecording = false;
-                    micHint.innerHTML = `<span style="color:var(--accent); font-weight:600;">✨ Pause detected, processing speech...</span>`;
-                    stopRecording(true);
-                }
+        const constraints = {
+            audio: {
+                channelCount: 1,
+                echoCancellation: true,
+                noiseSuppression: false, // Critical: preserves soft speech, consonants, and accents
+                autoGainControl: true
             }
         };
+        micStream = await navigator.mediaDevices.getUserMedia(constraints);
+    } catch (micErr) {
+        console.warn("Microphone access error:", micErr);
+        micHint.innerHTML = `<span style="color:var(--danger); font-weight:700;">⚠️ Microphone permission denied!</span> Please allow microphone access in your browser address bar.`;
+        return;
+    }
 
-        micSource.connect(scriptProcessor);
-        scriptProcessor.connect(wavAudioContext.destination);
+    // Determine optimal supported MediaRecorder mimeType
+    let mimeType = 'audio/webm;codecs=opus';
+    if (!window.MediaRecorder || !MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'audio/webm';
+    }
+    if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'audio/mp4';
+    }
+    if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = '';
+    }
 
-        // Animate visualizer bars in real-time
+    try {
+        mediaRecorder = mimeType ? new MediaRecorder(micStream, { mimeType }) : new MediaRecorder(micStream);
+    } catch (e) {
+        mediaRecorder = new MediaRecorder(micStream);
+    }
+
+    audioChunks = [];
+    speechEverDetected = false;
+    silenceStartTimestamp = null;
+    isRecording = true;
+
+    mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+            audioChunks.push(e.data);
+        }
+    };
+
+    mediaRecorder.onstop = async () => {
+        const mime = mediaRecorder.mimeType || 'audio/webm';
+        const audioBlob = new Blob(audioChunks, { type: mime });
+        audioChunks = [];
+        if (audioBlob.size > 500) {
+            await sendAudioToBackend(audioBlob);
+        } else {
+            isSubmittingSpeech = false;
+            stateText.innerText = "Ruku is ready to listen";
+            micHint.innerText = "Click the microphone to speak with Ruku";
+        }
+    };
+
+    // Clean single-container recording without timeslice fragmentation
+    mediaRecorder.start();
+
+    // UI Updates
+    micBtn.classList.add("recording");
+    audioVisualizer.classList.add("active");
+    micHint.innerHTML = `<span style="color:var(--primary); font-weight:600;">🎙️ Listening... (Speak freely, pauses auto-submit)</span>`;
+    stateText.innerText = "Ruku is listening carefully...";
+
+    // AudioContext strictly for VAD & Visualizer (no loopback to speakers!)
+    try {
+        if (!audioContext || audioContext.state === 'closed') {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioContext.state === 'suspended') {
+            audioContext.resume();
+        }
+        const source = audioContext.createMediaStreamSource(micStream);
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 64;
+        source.connect(analyser);
+
         const dataArray = new Uint8Array(analyser.frequencyBinCount);
         const bars = audioVisualizer.querySelectorAll(".bar");
 
-        function updateVisualizer() {
-            if (!isAudioRecording) return;
+        function vadLoop() {
+            if (!isRecording) return;
             analyser.getByteFrequencyData(dataArray);
+
+            // Animate visualizer bars in real-time
             bars.forEach((bar, index) => {
                 const val = dataArray[index % dataArray.length];
                 const height = Math.max(4, (val / 255) * 28);
                 bar.style.height = `${height}px`;
             });
-            requestAnimationFrame(updateVisualizer);
-        }
-        updateVisualizer();
 
-        // Safety limit: auto stop after 10 seconds of continuous speech
+            // Calculate average speech volume
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                sum += dataArray[i];
+            }
+            const avgVol = sum / dataArray.length;
+
+            // VAD logic: detect voice activity
+            if (avgVol > 7) {
+                speechEverDetected = true;
+                silenceStartTimestamp = null;
+                micHint.innerHTML = `<span style="color:var(--primary); font-weight:600;">🎙️ Hearing you speak...</span>`;
+            } else if (speechEverDetected) {
+                const now = Date.now();
+                if (!silenceStartTimestamp) {
+                    silenceStartTimestamp = now;
+                } else if (now - silenceStartTimestamp > 800) {
+                    // 800ms natural conversational pause detected -> auto submit!
+                    micHint.innerHTML = `<span style="color:var(--accent); font-weight:600;">⚡ Answer finished! Generating reply...</span>`;
+                    stopRecording(true);
+                    return;
+                }
+            }
+
+            vadAnimFrame = requestAnimationFrame(vadLoop);
+        }
+        vadAnimFrame = requestAnimationFrame(vadLoop);
+
+        // Safety limit: 12 seconds auto stop
         if (autoStopTimer) clearTimeout(autoStopTimer);
         autoStopTimer = setTimeout(() => {
-            if (isRecording || isAudioRecording) {
+            if (isRecording) {
                 stopRecording(true);
             }
-        }, 10000);
+        }, 12000);
+
     } catch (e) {
-        console.warn("WAV recorder init error:", e);
+        console.warn("VAD init warning:", e);
     }
 }
 
-async function stopRecording(shouldTranscribe = true) {
+function stopRecording(shouldTranscribe = true) {
     if (autoStopTimer) {
         clearTimeout(autoStopTimer);
         autoStopTimer = null;
     }
+    if (vadAnimFrame) {
+        cancelAnimationFrame(vadAnimFrame);
+        vadAnimFrame = null;
+    }
 
-    const wasAudioRecording = isAudioRecording;
-    isAudioRecording = false;
     isRecording = false;
-
     micBtn.classList.remove("recording");
     audioVisualizer.classList.remove("active");
 
-    if (recognition) {
-        try { recognition.stop(); } catch (e) {}
-    }
-
-    if (scriptProcessor && micSource) {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
         try {
-            scriptProcessor.disconnect();
-            micSource.disconnect();
+            mediaRecorder.stop();
         } catch (e) {}
     }
 
@@ -313,52 +418,79 @@ async function stopRecording(shouldTranscribe = true) {
     }
 
     if (!shouldTranscribe) {
+        isSubmittingSpeech = false;
         stateText.innerText = "Ruku is ready to listen";
         return;
     }
-
-    // Process & transcribe recorded audio if we have audio samples
-    if (wasAudioRecording && recordedBuffers.length > 3) {
-        const wavBlob = exportWavBlob(recordedBuffers, recordingSampleRate);
-        recordedBuffers = [];
-        await sendAudioToBackendSTT(wavBlob);
-    } else {
-        recordedBuffers = [];
-        stateText.innerText = "Ruku is ready to listen";
-        if (!micHint.innerHTML.includes("⚠️")) {
-            micHint.innerText = "Click the microphone to speak with Ruku";
-        }
-    }
 }
 
-async function sendAudioToBackendSTT(wavBlob) {
+async function sendAudioToBackend(audioBlob) {
     if (isSubmittingSpeech) return;
     isSubmittingSpeech = true;
 
-    micHint.innerHTML = `<span style="color:var(--accent); font-weight:600;">⏳ Transcribing your speech...</span>`;
-    stateText.innerText = "Ruku is processing your voice...";
+    micHint.innerHTML = `<span style="color:var(--accent); font-weight:600;">⚡ Ruku is listening & thinking...</span>`;
+    stateText.innerText = "Ruku is understanding & responding...";
 
     try {
         const formData = new FormData();
-        formData.append("audio", wavBlob, "user_voice.wav");
+        formData.append("audio", audioBlob, "user_voice.webm");
         formData.append("language", currentLanguage);
+        formData.append("stage_json", JSON.stringify(currentStage || {}));
+        formData.append("chat_history_json", JSON.stringify(conversationHistory || []));
 
-        const res = await fetch("/api/speech-to-text", {
+        const res = await fetch("/api/voice-chat", {
             method: "POST",
             body: formData
         });
         const data = await res.json();
 
-        if (data.success && data.text && data.text.trim()) {
-            micHint.innerText = `Recognized: "${data.text.trim()}"`;
-            handleUserMessage(data.text.trim());
+        if (data.success && data.user_text) {
+            micHint.innerText = `Recognized: "${data.user_text}"`;
+
+            // 1. Show user message in transcript & save history
+            appendMessage("You", data.user_text, "user-message", null, data);
+            conversationHistory.push({
+                role: "user",
+                text: data.user_text,
+                has_mistake: data.has_mistake,
+                correction: data.correction
+            });
+
+            // 2. Update real-time scores & grammar coaching
+            updateScores(data.fluency_score, data.accuracy_score);
+            updateGrammarFeedback(data);
+            if (data.vocabulary_tip) {
+                vocabContent.innerText = data.vocabulary_tip;
+            }
+
+            // 3. Output Ruku's response & persist stage memory
+            conversationHistory.push({ role: "ruku", text: data.reply, audio_url: data.audio_url || null });
+            appendMessage("Ruku", data.reply, "ruku-message", data.audio_url);
+            if (currentStage) saveStageHistory(currentStage.id);
+
+            // 4. Play spoken response
+            if (data.audio_url) {
+                playServerAudio(data.audio_url, data.reply);
+            } else {
+                speakRukuText(data.reply);
+            }
         } else {
-            const errMsg = data.error || "Could not hear clearly. Please click mic and try speaking closer.";
-            micHint.innerHTML = `<span style="color:var(--warning);">${errMsg}</span>`;
+            const errMsg = data.error || "Could not catch clear words. Please click mic and speak closer.";
+            micHint.innerHTML = `<span style="color:var(--warning); font-weight:600;">⚠️ ${errMsg}</span>`;
             stateText.innerText = "Ruku is ready to listen";
+            
+            // Allow retry in hands-free mode after brief pause
+            const handsFreeCheckbox = document.getElementById("handsFreeCheckbox");
+            if (handsFreeCheckbox && handsFreeCheckbox.checked) {
+                setTimeout(() => {
+                    if (!isRecording && !isSubmittingSpeech) {
+                        startRecording();
+                    }
+                }, 2000);
+            }
         }
     } catch (err) {
-        console.error("Backend STT error:", err);
+        console.error("Voice-chat connection error:", err);
         micHint.innerText = "Click the microphone to speak with Ruku";
         stateText.innerText = "Ruku is ready to listen";
     } finally {
@@ -366,55 +498,17 @@ async function sendAudioToBackendSTT(wavBlob) {
     }
 }
 
-function exportWavBlob(buffers, sampleRate) {
-    let totalLength = buffers.reduce((acc, b) => acc + b.length, 0);
-    let merged = new Float32Array(totalLength);
-    let offset = 0;
-    for (let b of buffers) {
-        merged.set(b, offset);
-        offset += b.length;
-    }
-
-    let buffer = new ArrayBuffer(44 + merged.length * 2);
-    let view = new DataView(buffer);
-
-    function writeString(view, offset, string) {
-        for (let i = 0; i < string.length; i++) {
-            view.setUint8(offset + i, string.charCodeAt(i));
-        }
-    }
-
-    writeString(view, 0, 'RIFF');
-    view.setUint32(4, 36 + merged.length * 2, true);
-    writeString(view, 8, 'WAVE');
-    writeString(view, 12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true); // PCM
-    view.setUint16(22, 1, true); // Mono
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * 2, true);
-    view.setUint16(32, 2, true);
-    view.setUint16(34, 16, true);
-    writeString(view, 36, 'data');
-    view.setUint32(40, merged.length * 2, true);
-
-    let index = 44;
-    for (let i = 0; i < merged.length; i++) {
-        let s = Math.max(-1, Math.min(1, merged[i]));
-        view.setInt16(index, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-        index += 2;
-    }
-
-    return new Blob([view], { type: 'audio/wav' });
-}
-
 
 // 3. User Message Handling & Server Communication
 async function handleUserMessage(message) {
-    if (!message || !message.trim()) return;
+    if (!message || !message.trim()) {
+        isSubmittingSpeech = false;
+        return;
+    }
 
     appendMessage("You", message, "user-message");
     conversationHistory.push({ role: "user", text: message });
+    if (currentStage) saveStageHistory(currentStage.id);
     stateText.innerText = "Ruku is thinking...";
 
     try {
@@ -439,17 +533,20 @@ async function handleUserMessage(message) {
         }
 
         // Output Ruku's response
-        conversationHistory.push({ role: "ruku", text: data.reply });
-        appendMessage("Ruku", data.reply, "ruku-message");
+        conversationHistory.push({ role: "ruku", text: data.reply, audio_url: data.audio_url || null });
+        appendMessage("Ruku", data.reply, "ruku-message", data.audio_url);
+        if (currentStage) saveStageHistory(currentStage.id);
         
         if (data.audio_url) {
-            playServerAudio(data.audio_url);
+            playServerAudio(data.audio_url, data.reply);
         } else {
             speakRukuText(data.reply);
         }
     } catch (err) {
         console.error("Chat error:", err);
         stateText.innerText = "Ruku is ready to listen";
+    } finally {
+        isSubmittingSpeech = false;
     }
 }
 
@@ -480,39 +577,137 @@ function updateGrammarFeedback(data) {
     }
 }
 
-function appendMessage(sender, text, className) {
+function appendMessage(sender, text, className, audioUrl = null, feedback = null) {
     const msg = document.createElement("div");
     msg.className = `message ${className}`;
-    msg.innerHTML = `<strong>${sender}:</strong> ${text}`;
+    
+    let btnHtml = "";
+    if (sender === "Ruku" && text) {
+        btnHtml = `<button class="msg-audio-btn" type="button" title="Click to listen to Ruku speak">🔊 Listen</button>`;
+    }
+
+    let correctionHtml = "";
+    if (sender === "You" && feedback && feedback.has_mistake && feedback.correction) {
+        correctionHtml = `
+            <div class="msg-correction-pill">
+                <span class="pill-icon">💡</span>
+                <span><strong>Better:</strong> "${feedback.correction}"</span>
+            </div>
+        `;
+    }
+
+    msg.innerHTML = `<strong>${sender}:</strong> <span>${text}</span> ${btnHtml}${correctionHtml}`;
+    
+    if (sender === "Ruku" && text) {
+        const audioBtn = msg.querySelector(".msg-audio-btn");
+        if (audioBtn) {
+            audioBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                unlockAudio();
+                if (audioUrl) {
+                    playServerAudio(audioUrl, text);
+                } else {
+                    speakRukuText(text);
+                }
+            });
+        }
+    }
+
     chatMessages.appendChild(msg);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
 // 4. Voice Output & Talking Lip-Sync Animation
-function playServerAudio(url) {
+const SILENT_SOUND = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+
+function unlockAudio() {
+    try {
+        if (rukuAudio && (!rukuAudio.src || rukuAudio.src === "" || rukuAudio.src === window.location.href)) {
+            rukuAudio.src = SILENT_SOUND;
+            rukuAudio.volume = 1.0;
+            rukuAudio.play().then(() => {
+                // Audio is now permanently unlocked for automatic unmuted playback
+            }).catch(() => {});
+        }
+        if ('speechSynthesis' in window && window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+        }
+    } catch (e) {}
+}
+
+function playServerAudio(url, fallbackText = null) {
+    if (!url) {
+        if (fallbackText) speakRukuText(fallbackText);
+        return;
+    }
+    
     rukuAudio.src = url;
-    rukuAudio.play().catch(e => console.log("Audio play error:", e));
-    setupLipSync();
+    rukuAudio.currentTime = 0;
+    
+    const playPromise = rukuAudio.play();
+    if (playPromise !== undefined) {
+        playPromise.then(() => {
+            setupLipSync();
+        }).catch(err => {
+            console.warn("Server audio playback failed or blocked by browser, falling back to speech synthesis:", err);
+            if (fallbackText) {
+                speakRukuText(fallbackText);
+            }
+        });
+    } else {
+        setupLipSync();
+    }
 }
 
 function speakRukuText(text) {
-    if ('speechSynthesis' in window) {
+    if (!text || !('speechSynthesis' in window)) return;
+
+    try {
+        if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+        }
         window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = getLanguageCode(currentLanguage);
-        utterance.rate = 0.95;
-        
-        // Find natural female voice if available
-        const voices = window.speechSynthesis.getVoices();
-        const femaleVoice = voices.find(v => v.lang.startsWith(utterance.lang.slice(0, 2)) && (v.name.includes("Female") || v.name.includes("Jenny") || v.name.includes("Zira")));
-        if (femaleVoice) utterance.voice = femaleVoice;
+    } catch (e) {}
 
-        utterance.onstart = () => startSimulatedLipSync();
-        utterance.onend = () => stopLipSync();
-        utterance.onerror = () => stopLipSync();
+    setTimeout(() => {
+        try {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = getLanguageCode(currentLanguage);
+            utterance.rate = 0.95;
+            utterance.pitch = 1.05;
+            utterance.volume = 1.0;
+            
+            // Find natural female voice if available
+            const voices = window.speechSynthesis.getVoices();
+            if (voices && voices.length > 0) {
+                const langPrefix = utterance.lang.slice(0, 2).toLowerCase();
+                const femaleVoice = voices.find(v => 
+                    v.lang.toLowerCase().startsWith(langPrefix) && 
+                    (v.name.includes("Female") || v.name.includes("Jenny") || v.name.includes("Zira") || v.name.includes("Google") || v.name.includes("Natural"))
+                ) || voices.find(v => v.lang.toLowerCase().startsWith(langPrefix));
+                if (femaleVoice) utterance.voice = femaleVoice;
+            }
 
-        window.speechSynthesis.speak(utterance);
-    }
+            utterance.onstart = () => startSimulatedLipSync();
+            utterance.onend = () => {
+                stopLipSync();
+                handlePostSpeechAutoListen();
+            };
+            utterance.onerror = (e) => {
+                console.warn("SpeechSynthesis error:", e);
+                stopLipSync();
+            };
+
+            window.speechSynthesis.speak(utterance);
+
+            if (window.speechSynthesis.paused) {
+                window.speechSynthesis.resume();
+            }
+        } catch (err) {
+            console.warn("speakRukuText exception:", err);
+            stopLipSync();
+        }
+    }, 60);
 }
 
 function startSimulatedLipSync() {
@@ -531,8 +726,24 @@ function startSimulatedLipSync() {
 
 function setupLipSync() {
     startSimulatedLipSync();
-    rukuAudio.onended = () => stopLipSync();
+    rukuAudio.onended = () => {
+        stopLipSync();
+        handlePostSpeechAutoListen();
+    };
     rukuAudio.onerror = () => stopLipSync();
+}
+
+function handlePostSpeechAutoListen() {
+    const handsFreeCheckbox = document.getElementById("handsFreeCheckbox");
+    if (handsFreeCheckbox && handsFreeCheckbox.checked && !isRecording && !isSubmittingSpeech) {
+        stateText.innerText = "Ruku is listening for your answer...";
+        micHint.innerHTML = `<span style="color:var(--primary); font-weight:600;">🎙️ Your turn to speak! (Auto-listening...)</span>`;
+        setTimeout(() => {
+            if (!isRecording && !isSubmittingSpeech) {
+                startRecording();
+            }
+        }, 700);
+    }
 }
 
 function stopLipSync() {
@@ -548,56 +759,17 @@ function stopLipSync() {
 // 5. Event Listeners & Modals
 function setupEventListeners() {
     micBtn.addEventListener("click", async () => {
-        // If already recording, clicking mic again finishes and transcribes
-        if (isRecording || isAudioRecording) {
-            await stopRecording(true);
-            return;
-        }
-
-        // 1. Explicitly prompt user for Microphone permission with DSP audio filtering
-        try {
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                const constraints = {
-                    audio: {
-                        channelCount: 1,
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true
-                    }
-                };
-                micStream = await navigator.mediaDevices.getUserMedia(constraints);
-            } else {
-                micHint.innerHTML = `<span style="color:var(--danger);">Microphone not supported on this browser.</span>`;
-                return;
-            }
-        } catch (micErr) {
-            console.warn("Microphone access error:", micErr);
-            micHint.innerHTML = `<span style="color:var(--danger); font-weight:700;">⚠️ Microphone permission denied!</span> Please allow microphone access in your browser address bar.`;
-            return;
-        }
-
-        // 2. Start Audio WAV Recorder + Visualizer
-        isRecording = true;
-        micBtn.classList.add("recording");
-        audioVisualizer.classList.add("active");
-        micHint.innerHTML = `<span style="color:var(--primary); font-weight:600;">🎙️ Listening... (Speak freely, auto-submits on pause)</span>`;
-        stateText.innerText = "Ruku is listening carefully...";
-
-        startWavRecording(micStream);
-
-        // 3. Optional live interim preview via browser SpeechRecognition if supported
-        if (recognition) {
-            try {
-                recognition.lang = getLanguageCode(currentLanguage);
-                recognition.start();
-            } catch (err) {
-                console.warn("SpeechRecognition start notice:", err);
-            }
+        unlockAudio();
+        if (isRecording) {
+            stopRecording(true);
+        } else {
+            await startRecording();
         }
     });
 
     chatForm.addEventListener("submit", (e) => {
         e.preventDefault();
+        unlockAudio();
         const text = textInput.value.trim();
         if (text) {
             textInput.value = "";
@@ -607,7 +779,6 @@ function setupEventListeners() {
 
     languageSelect.addEventListener("change", (e) => {
         currentLanguage = e.target.value;
-        if (recognition) recognition.lang = getLanguageCode(currentLanguage);
         appendMessage("System", `Switched practice language to ${currentLanguage}.`, "ruku-message");
     });
 
@@ -615,6 +786,26 @@ function setupEventListeners() {
     closeModalBtn.addEventListener("click", () => paypalModal.classList.remove("open"));
     paypalModal.addEventListener("click", (e) => {
         if (e.target === paypalModal) paypalModal.classList.remove("open");
+    });
+
+    // Clear transcript and reset stage memory
+    const clearChatBtn = document.getElementById("clearChatBtn");
+    if (clearChatBtn) {
+        clearChatBtn.addEventListener("click", () => {
+            if (currentStage && confirm("Are you sure you want to clear memory and restart this stage?")) {
+                clearStageHistory(currentStage.id);
+                selectStage(currentStage);
+            }
+        });
+    }
+
+    // Clicking Ruku's avatar replays her latest message
+    avatarGraphic.addEventListener("click", () => {
+        unlockAudio();
+        const lastRukuMsg = [...conversationHistory].reverse().find(m => m.role === "ruku");
+        if (lastRukuMsg && lastRukuMsg.text) {
+            speakRukuText(lastRukuMsg.text);
+        }
     });
 }
 

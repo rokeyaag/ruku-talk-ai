@@ -1,0 +1,515 @@
+[
+  {
+    "timestamp": "2026-11-08T08:13:42.767473",
+    "stage_id": 1,
+    "language": "English",
+    "user": "hello",
+    "ruku": "Haha, hello again! Don't be shy—what is your name so we can get started?",
+    "fluency_score": 70,
+    "accuracy_score": 100
+  },
+  {
+    "timestamp": "2026-11-08T08:29:55.250913",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Hello, bro. How are you?",
+    "ruku": "Hello! I am doing wonderful, thank you for asking. Now that we are saying hello, what is your name?",
+    "fluency_score": 90,
+    "accuracy_score": 100
+  },
+  {
+    "timestamp": "2026-11-08T08:30:21.938465",
+    "stage_id": 1,
+    "language": "English",
+    "user": "raman",
+    "ruku": "Nice to meet you, Raman! That's a wonderful name. Now, could you tell me where you are from?",
+    "fluency_score": 90,
+    "accuracy_score": 100
+  },
+  {
+    "timestamp": "2026-11-08T08:30:48.525642",
+    "stage_id": 1,
+    "language": "English",
+    "user": "polish",
+    "ruku": "Poland! That is such a beautiful country. What do you do there, Raman—are you working or studying?",
+    "fluency_score": 85,
+    "accuracy_score": 90
+  },
+  {
+    "timestamp": "2026-11-08T08:31:03.172703",
+    "stage_id": 1,
+    "language": "English",
+    "user": "0:00",
+    "ruku": "Hmm, it looks like you accidentally typed \"0:00\"! Are you working in Poland, or are you still a student?",
+    "fluency_score": 70,
+    "accuracy_score": 100
+  },
+  {
+    "timestamp": "2026-11-08T08:31:16.738453",
+    "stage_id": 1,
+    "language": "English",
+    "user": "A piece of cake.",
+    "ruku": "Haha, I love that idiom, Raman! It really is easy. So, what do you do for work or study in Poland?",
+    "fluency_score": 90,
+    "accuracy_score": 95
+  },
+  {
+    "timestamp": "2026-11-08T08:31:43.687556",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Pole enter. Actually I I I want to study in Spain.",
+    "ruku": "Spain sounds amazing, Raman! What subject are you hoping to study there?",
+    "fluency_score": 75,
+    "accuracy_score": 80
+  },
+  {
+    "timestamp": "2026-11-08T08:32:08.388307",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Achha, zaid hi si.",
+    "ruku": "No worries at all, Raman! It looks like you slipped into a bit of Hindi or Bengali there. What kind of subject or major are you hoping to study in Spain?",
+    "fluency_score": 75,
+    "accuracy_score": 80
+  },
+  {
+    "timestamp": "2026-11-08T08:32:38.269184",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Lourdes, un an",
+    "ruku": "Ah, Lourdes! Are you planning to study French or something else there for a year?",
+    "fluency_score": 70,
+    "accuracy_score": 75
+  },
+  {
+    "timestamp": "2026-11-08T08:33:03.535387",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Are you very",
+    "ruku": "It looks like your message got cut off, Raman! Were you asking if I am very smart, or were you trying to say something else about yourself?",
+    "fluency_score": 70,
+    "accuracy_score": 80
+  },
+  {
+    "timestamp": "2026-11-08T08:33:32.048182",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Chicken.",
+    "ruku": "Haha, chicken? Are you a big fan of eating chicken, or is that one of your favorite dishes to cook in Poland, Raman?",
+    "fluency_score": 75,
+    "accuracy_score": 100
+  },
+  {
+    "timestamp": "2026-11-08T08:33:57.786825",
+    "stage_id": 1,
+    "language": "English",
+    "user": "article",
+    "ruku": "Article? Are you thinking about writing an article, or is reading articles one of your hobbies, Raman?",
+    "fluency_score": 70,
+    "accuracy_score": 80
+  },
+  {
+    "timestamp": "2026-11-08T08:34:22.385348",
+    "stage_id": 1,
+    "language": "English",
+    "user": "<noise>",
+    "ruku": "No worries if you're just testing the microphone, Raman! Whenever you're ready, tell me a bit more about what you like to do for fun in Poland.",
+    "fluency_score": 75,
+    "accuracy_score": 100
+  },
+  {
+    "timestamp": "2026-11-08T08:34:51.405665",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Hello.",
+    "ruku": "Hello again, Raman! It's so nice to hear from you. What have you been up to today in Poland?",
+    "fluency_score": 90,
+    "accuracy_score": 100
+  },
+  {
+    "timestamp": "2026-11-08T08:35:17.685599",
+    "stage_id": 1,
+    "language": "English",
+    "user": "00",
+    "ruku": "Haha, looks like a little keyboard slip with \"00\" there, Raman! What is your absolute favorite hobby to do when you have some free time?",
+    "fluency_score": 70,
+    "accuracy_score": 100
+  },
+  {
+    "timestamp": "2026-11-08T09:00:33.473874",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Hello Ruku, I am ready to start.",
+    "ruku": "Hi there! I am so excited to chat. Can you tell me your name and where you are from?",
+    "fluency_score": 100,
+    "accuracy_score": 100
+  },
+  {
+    "timestamp": "2026-11-08T09:24:19.040485",
+    "stage_id": 1,
+    "language": "English",
+    "user": "coding is like a AI programming",
+    "ruku": "Coding is fun, Raman! What kind of apps or projects do you like to build?",
+    "fluency_score": 85,
+    "accuracy_score": 88
+  },
+  {
+    "timestamp": "2026-11-08T09:24:43.142651",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Now, I am ready to project Rukutok.",
+    "ruku": "Project Rukutok sounds super exciting! What kind of app are we building together?",
+    "fluency_score": 85,
+    "accuracy_score": 80
+  },
+  {
+    "timestamp": "2026-11-08T09:25:08.406477",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Okay, I am agree to your proposal. Thank you.",
+    "ruku": "Awesome! Just a quick tip: we say \"I agree\" instead of \"I am agree\". So, what's our first step for Project Rukutok?",
+    "fluency_score": 85,
+    "accuracy_score": 80
+  },
+  {
+    "timestamp": "2026-11-08T09:25:35.584642",
+    "stage_id": 1,
+    "language": "English",
+    "user": "I want to learning English. Can you learn me or teach me? uh learn me or teach me what is um correct sentence? Can you explain",
+    "ruku": "We say 'teach me'! A teacher teaches, and a student learns.",
+    "fluency_score": 85,
+    "accuracy_score": 80
+  },
+  {
+    "timestamp": "2026-11-08T09:25:59.132271",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Okay. You good",
+    "ruku": "Thank you, Raman! You're doing great. What should we build next for Project Rukutok?",
+    "fluency_score": 85,
+    "accuracy_score": 80
+  },
+  {
+    "timestamp": "2026-11-08T09:26:24.694030",
+    "stage_id": 1,
+    "language": "English",
+    "user": "only only I want to uh English speaking learning",
+    "ruku": "Got it! You want to practice speaking English. What topic should we talk about first?",
+    "fluency_score": 75,
+    "accuracy_score": 70
+  },
+  {
+    "timestamp": "2026-11-08T09:26:50.492595",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Grammatical, I want to learn.",
+    "ruku": "Love the enthusiasm, Raman! Let's talk about your favorite daily routine. What time do you usually wake up?",
+    "fluency_score": 80,
+    "accuracy_score": 75
+  },
+  {
+    "timestamp": "2026-11-08T09:27:17.088021",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Wake up 6 a.m. morning time.",
+    "ruku": "6 a.m. is a nice early start, Raman! What do you do right after waking up?",
+    "fluency_score": 75,
+    "accuracy_score": 70
+  },
+  {
+    "timestamp": "2026-11-08T09:28:34.508317",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Actually uh not uh for woke up uh woke up after I'll treat my brush and uh take my shower. After that, I",
+    "ruku": "Brush my teeth sounds better than treat my brush! What do you do after your shower?",
+    "fluency_score": 80,
+    "accuracy_score": 82
+  },
+  {
+    "timestamp": "2026-11-08T09:28:58.832734",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Sorry again again please question me.",
+    "ruku": "No worries at all, Raman! What do you like to eat for breakfast?",
+    "fluency_score": 80,
+    "accuracy_score": 75
+  },
+  {
+    "timestamp": "2026-11-08T09:29:22.453125",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Um actually I take breakfast bread and jelly.",
+    "ruku": "Yum, bread and jelly is a sweet start! Do you usually drink tea or coffee with it?",
+    "fluency_score": 80,
+    "accuracy_score": 75
+  },
+  {
+    "timestamp": "2026-11-08T09:29:46.931234",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Of course, I take tea.",
+    "ruku": "Tea is a classic choice, Raman! Do you make it yourself?",
+    "fluency_score": 88,
+    "accuracy_score": 85
+  },
+  {
+    "timestamp": "2026-11-08T09:30:10.121587",
+    "stage_id": 1,
+    "language": "English",
+    "user": "No no no. I am not mad.",
+    "ruku": "Haha, fair enough! Do you buy your tea outside or does someone else make it?",
+    "fluency_score": 85,
+    "accuracy_score": 90
+  },
+  {
+    "timestamp": "2026-11-08T09:30:34.426673",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Take it in in my house.",
+    "ruku": "Ah, someone at home makes it for you! That's so cozy.",
+    "fluency_score": 80,
+    "accuracy_score": 75
+  },
+  {
+    "timestamp": "2026-11-08T09:30:57.915922",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Uh, you can explain me uh, what is uh cappuccino coffee. Can you explain me?",
+    "ruku": "A cappuccino is espresso with foamy, steamed milk! Do you like trying different coffees?",
+    "fluency_score": 80,
+    "accuracy_score": 85
+  },
+  {
+    "timestamp": "2026-11-08T09:31:22.449966",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Okay, waiting for me.",
+    "ruku": "Haha, I am always here for you, Raman! Do you prefer coffee or tea?",
+    "fluency_score": 85,
+    "accuracy_score": 80
+  },
+  {
+    "timestamp": "2026-11-08T09:31:46.883998",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Hm.",
+    "ruku": "Haha, keeping it mysterious, Raman! Do you have any hobbies besides enjoying your tea?",
+    "fluency_score": 80,
+    "accuracy_score": 100
+  },
+  {
+    "timestamp": "2026-11-08T09:32:11.580535",
+    "stage_id": 1,
+    "language": "English",
+    "user": "00:05:  some",
+    "ruku": "Some? What is your favorite thing to do, Raman?",
+    "fluency_score": 70,
+    "accuracy_score": 75
+  },
+  {
+    "timestamp": "2026-11-08T09:32:52.553845",
+    "stage_id": 1,
+    "language": "English",
+    "user": "rakh lijiye Oh shukriya bhai tumhi rakh lo tumhe jarurat hogi aapke paise the saab maine maange to nahi the jo mera nahi wo nahi",
+    "ruku": "Haha, looks like a little mix-up, Raman! Let's keep practicing in English. What is your favorite hobby?",
+    "fluency_score": 75,
+    "accuracy_score": 80
+  },
+  {
+    "timestamp": "2026-11-08T09:33:19.218000",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Actually, my hobby now, I am a programmer. That's why I can coding right and making a project.",
+    "ruku": "Coding is a fantastic hobby, Raman! What kind of projects do you build?",
+    "fluency_score": 75,
+    "accuracy_score": 70
+  },
+  {
+    "timestamp": "2026-11-08T09:33:42.687375",
+    "stage_id": 1,
+    "language": "English",
+    "user": "A project English learning software project, you know very well.",
+    "ruku": "Haha, yes, an English learning app! Do you build it using web or mobile tech?",
+    "fluency_score": 80,
+    "accuracy_score": 85
+  },
+  {
+    "timestamp": "2026-11-08T09:34:06.405923",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Okay, you can wait for me. Don't talk this time. You give me a 10 minutes.",
+    "ruku": "Take your time, Raman! I'll be right here waiting for you.",
+    "fluency_score": 80,
+    "accuracy_score": 75
+  },
+  {
+    "timestamp": "2026-11-08T09:35:03.954255",
+    "stage_id": 1,
+    "language": "English",
+    "user": "সিলেটরের ভাব কি একজন মুসলমান হয় সিলেটর মানে বুজেন জোহরান মানবা মানদারি কিছু দিন আগে নিয়র্ক মেয়র হইছে মেয়ের চাইতে অনেক উপরে তার ক্ষমতা আমি সিলেট নিয়ে তো পড়া আসতেছি সিলেটরে কি আমি আপনাকে বুঝাই বলবো তখন সে বলতেছে একজন সিলেটরকে কিভাবে",
+    "ruku": "No worries, Raman! Take all the time you need. Let's practice in English when you're ready!",
+    "fluency_score": 85,
+    "accuracy_score": 90
+  },
+  {
+    "timestamp": "2026-11-08T09:35:29.474182",
+    "stage_id": 1,
+    "language": "English",
+    "user": "ঐডা যদি ডোনাল্ড ট্রাম্প যখন প্রেসিডেন্ট হইছে তখন যদি হইতো না তাহলে আজকে এই ওয়ার্ল্ড টা লাগতো না। ডোনাল্ড আমাদের দেশের কিছু মানুষ বলে কি জানেন? আমেরিকা ধ্বংস আসসালামু আলাইকুম। আপনি উপরে আটটি",
+    "ruku": "Walaikum Assalam, Raman! Let's switch back to English. What are you up to?",
+    "fluency_score": 80,
+    "accuracy_score": 85
+  },
+  {
+    "timestamp": "2026-11-08T09:35:57.073278",
+    "stage_id": 1,
+    "language": "English",
+    "user": "pareven upi korte gulo hello parbe na wahaath lagaye machine kaise kam karegi",
+    "ruku": "Haha, looks like you're mixing up languages again, Raman! How about we try that in English?",
+    "fluency_score": 50,
+    "accuracy_score": 50
+  },
+  {
+    "timestamp": "2026-11-08T09:35:57.336387",
+    "stage_id": 1,
+    "language": "English",
+    "user": "পারবেনা ঠিক করতে এগুলোহ্যালো পারবেনা বগার হাত লাগায় ওই মেশিন কিসে কাম করবে সিনা? তুমিই বলো যে কি পর্যায় আক্তারিস আর ওইগুলো চালায়?",
+    "ruku": "No worries! Let's start with your name and where you are from in English.",
+    "fluency_score": 50,
+    "accuracy_score": 40
+  },
+  {
+    "timestamp": "2026-11-08T20:05:12.940118",
+    "stage_id": 1,
+    "language": "English",
+    "user": "and um speak in English conversation to you",
+    "ruku": "That's great, Raman! Who do you usually like to speak English with?",
+    "audio_url": "/assets/audio_temp/ruku_voice_45695e64.mp3",
+    "fluency_score": 75,
+    "accuracy_score": 70,
+    "has_mistake": true,
+    "original_mistake": "and um speak in English conversation to you",
+    "correction": "and um I like to speak English with you",
+    "explanation": "Adding the subject 'I' makes your sentence complete and natural.",
+    "vocabulary_tip": "practice conversation"
+  },
+  {
+    "timestamp": "2026-11-08T20:05:37.680301",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Apni ki amar kachhe niyechte golpo? Ami niyechhi. Thik achhe, ami kachhe niyechhi.",
+    "ruku": "Haha, looks like some Bengali mixed in again! Want to tell me a story in English?",
+    "audio_url": "/assets/audio_temp/ruku_voice_59e78644.mp3",
+    "fluency_score": 70,
+    "accuracy_score": 75,
+    "has_mistake": false,
+    "original_mistake": null,
+    "correction": null,
+    "explanation": null,
+    "vocabulary_tip": "Instead of 'telling a story', you can say 'sharing a story'."
+  },
+  {
+    "timestamp": "2026-11-08T20:06:04.588787",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Yes. I want to tell you English.",
+    "ruku": "Awesome, Raman! What's the story about?",
+    "audio_url": "/assets/audio_temp/ruku_voice_a34cb166.mp3",
+    "fluency_score": 80,
+    "accuracy_score": 85,
+    "has_mistake": true,
+    "original_mistake": "tell you English",
+    "correction": "tell you a story in English",
+    "explanation": "We say 'tell you a story in English' to be clear.",
+    "vocabulary_tip": "Narrate a tale"
+  },
+  {
+    "timestamp": "2026-11-08T20:06:47.228992",
+    "stage_id": 1,
+    "language": "English",
+    "user": "My story I am a programmer AI based and learning cyber security.",
+    "ruku": "That's super cool, Raman! What kind of AI projects do you work on?",
+    "audio_url": "/assets/audio_temp/ruku_voice_35c5383b.mp3",
+    "fluency_score": 75,
+    "accuracy_score": 80,
+    "has_mistake": true,
+    "original_mistake": "My story I am a programmer AI based",
+    "correction": "I am an AI-based programmer",
+    "explanation": "Put the description before the noun, and say 'an' before 'AI'.",
+    "vocabulary_tip": "Instead of 'programmer', you can also say 'software developer'."
+  },
+  {
+    "timestamp": "2026-11-08T20:07:13.505549",
+    "stage_id": 1,
+    "language": "English",
+    "user": "This is your choice.",
+    "ruku": "That's an interesting answer! What kind of AI projects do you enjoy the most?",
+    "audio_url": "/assets/audio_temp/ruku_voice_d96e7420.mp3",
+    "fluency_score": 80,
+    "accuracy_score": 85,
+    "has_mistake": true,
+    "original_mistake": "This is your choice.",
+    "correction": "That's up to you.",
+    "explanation": "Saying 'That's up to you' sounds more natural when giving someone a choice.",
+    "vocabulary_tip": "You can also say 'It's your call'!"
+  },
+  {
+    "timestamp": "2026-11-08T20:07:38.206305",
+    "stage_id": 1,
+    "language": "English",
+    "user": "Jannat",
+    "ruku": "Jannat! That's a lovely name, Raman. What does it mean?",
+    "audio_url": "/assets/audio_temp/ruku_voice_3c79e78c.mp3",
+    "fluency_score": 90,
+    "accuracy_score": 100,
+    "has_mistake": false,
+    "original_mistake": null,
+    "correction": null,
+    "explanation": null,
+    "vocabulary_tip": "Instead of just saying a name, you can say 'My name is Jannat' or 'Her name is Jannat'."
+  },
+  {
+    "timestamp": "2026-11-08T20:08:03.199715",
+    "stage_id": 1,
+    "language": "English",
+    "user": "I am a person",
+    "ruku": "Simple and clear, Raman! Where do you live?",
+    "audio_url": "/assets/audio_temp/ruku_voice_23cf717c.mp3",
+    "fluency_score": 90,
+    "accuracy_score": 100,
+    "has_mistake": false,
+    "original_mistake": null,
+    "correction": null,
+    "explanation": null,
+    "vocabulary_tip": "Instead of just 'a person', you can say 'an individual'."
+  },
+  {
+    "timestamp": "2026-11-08T20:08:54.742875",
+    "stage_id": 1,
+    "language": "English",
+    "user": "metro station",
+    "ruku": "Ah, near a metro station! Which city do you live in, Raman?",
+    "audio_url": "/assets/audio_temp/ruku_voice_fe0dde3e.mp3",
+    "fluency_score": 80,
+    "accuracy_score": 85,
+    "has_mistake": false,
+    "original_mistake": null,
+    "correction": null,
+    "explanation": null,
+    "vocabulary_tip": "Instead of just 'metro station', you can say 'close to the subway system'."
+  },
+  {
+    "timestamp": "2026-11-08T20:09:19.224900",
+    "stage_id": 2,
+    "language": "English",
+    "user": "Come to stage two. Tell me about your typical morning. What time do you wake up and what is the first thing you do?",
+    "ruku": "Haha, you repeated my question! Tell me, what time do you usually wake up?",
+    "audio_url": "/assets/audio_temp/ruku_voice_b9404a57.mp3",
+    "fluency_score": 75,
+    "accuracy_score": 70,
+    "has_mistake": true,
+    "original_mistake": "Come to stage two. Tell me about your typical morning.",
+    "correction": "I am ready. I usually wake up at 7 AM.",
+    "explanation": "No worries! Just tell me about *your* morning routine instead of repeating mine.",
+    "vocabulary_tip": "Instead of 'wake up', you can say 'rise and shine'!"
+  }
+]

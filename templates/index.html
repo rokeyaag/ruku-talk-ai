@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RukuTalk AI - Multilingual Talking Avatar English Tutor</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=3.8">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- PayPal SDK Sandbox -->
-    <script src="https://www.paypal.com/sdk/js?client-id=test&currency=USD"></script>
+    <script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id | default('test') }}&currency=USD"></script>
 </head>
 <body>
     <div class="app-container">
@@ -74,7 +74,7 @@
                 <div class="avatar-viewport">
                     <div class="avatar-halo" id="avatarHalo"></div>
                     
-                    <div class="avatar-graphic" id="avatarGraphic">
+                    <div class="avatar-graphic" id="avatarGraphic" title="Click Ruku to hear her speak">
                         <img src="/static/img/ruku_avatar.jpg?v=5" alt="Ruku - AI English Tutor" class="ruku-photo-avatar" id="rukuPhoto">
                         <div class="avatar-glow-overlay"></div>
                     </div>
@@ -94,10 +94,19 @@
                         <div class="bar"></div><div class="bar"></div><div class="bar"></div>
                     </div>
 
-                    <button class="mic-button" id="micBtn" title="Hold or Click to Speak">
+                    <button class="mic-button" id="micBtn" title="Click to Speak">
                         <span class="mic-icon">🎙️</span>
                     </button>
                     <p class="mic-hint" id="micHint">Click the microphone to speak with Ruku</p>
+
+                    <!-- Auto-Conversation Hands-Free Mode Toggle -->
+                    <div class="hands-free-toggle" id="handsFreeToggleContainer" title="When ON, Ruku speaks automatically and then listens for your answer without clicking!">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="handsFreeCheckbox" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="toggle-text">⚡ Auto-Conversation (Hands-Free)</span>
+                    </div>
 
                     <!-- Text fallback input -->
                     <form class="text-fallback-form" id="chatForm">
@@ -141,11 +150,12 @@
 
                 <!-- Live Conversation Transcript -->
                 <div class="transcript-box">
-                    <h3>💬 Conversation Transcript</h3>
+                    <div class="transcript-header-row">
+                        <h3>💬 Conversation Transcript</h3>
+                        <button type="button" class="clear-chat-btn" id="clearChatBtn" title="Reset and clear memory for this stage">🔄 Clear Chat</button>
+                    </div>
                     <div class="chat-messages" id="chatMessages">
-                        <div class="message ruku-message">
-                            <strong>Ruku:</strong> Hello! I am Ruku, your English speaking partner. Let's start simple! Can you tell me your name and where you are from?
-                        </div>
+                        <!-- Populated dynamically via persistent history -->
                     </div>
                 </div>
             </aside>
@@ -180,6 +190,6 @@
     <!-- Hidden audio element for voice output -->
     <audio id="rukuAudio" style="display:none;"></audio>
 
-    <script src="/static/js/app.js"></script>
+    <script src="/static/js/app.js?v=3.8"></script>
 </body>
 </html>

@@ -17,6 +17,11 @@ class RukuTutorEngine:
         self._init_client()
 
     def _init_client(self):
+        try:
+            from dotenv import load_dotenv
+            load_dotenv()
+        except ImportError:
+            pass
         key = self.api_key or os.getenv("GEMINI_API_KEY", "")
         if key and genai and not self.client:
             try:
@@ -28,6 +33,75 @@ class RukuTutorEngine:
         if not self.client:
             self._init_client()
         return self.client
+
+    def transcribe_audio(self, audio_bytes: bytes, language: str = "English", mime_type: str = "audio/wav") -> str:
+        """
+        Uses Gemini's multimodal audio perception to accurately transcribe spoken speech.
+        Flawlessly handles accents, background noise, low volume, and multi-language queries.
+        """
+        client = self._get_client()
+        if not client or not genai:
+            return ""
+
+        candidate_models = [
+            os.getenv("GEMINI_MODEL", "gemini-flash-lite-latest").strip(),
+            "gemini-flash-lite-latest",
+            "gemini-3.8-flash",
+            "gemini-flash-latest",
+            "gemini-2.5-flash",
+            "gemini-2.0-flash",
+            "gemini-1.5-flash",
+            "gemini-3.5-flash-lite",
+            "gemini-3.5-flash",
+            "gemini-3.7-flash"
+        ]
+        valid_models = []
+        for m in candidate_models:
+            if m and m not in valid_models:
+                valid_models.append(m)
+
+        try:
+            part = types.Part.from_bytes(data=audio_bytes, mime_type=mime_type)
+            prompt = (
+                f"Listen carefully to this user audio recording. The user is practicing speaking in {language} (or their native language/ESL). "
+                "Accurately transcribe all words spoken by the user. "
+                "Pay special attention to South Asian, ESL, or non-native accents, proper nouns (such as names like Rahman, Tanvir, Priya, etc. and places like Dhaka, Chittagong, Kolkata, etc.), and brief words. "
+                "Do NOT correct or alter their grammar—transcribe exactly the words uttered. "
+                "Return ONLY the plain transcribed text without quotation marks, markdown, or commentary. "
+                "If the recording has no audible speech at all (only silence, pure static, or noise), return nothing."
+            )
+
+            gen_config = None
+            if hasattr(types, "GenerateContentConfig"):
+                try:
+                    gen_config = types.GenerateContentConfig(
+                        temperature=0.0,
+                        max_output_tokens=150
+                    )
+                except Exception:
+                    gen_config = None
+
+            for model_name in valid_models:
+                try:
+                    kwargs = {"model": model_name, "contents": [part, prompt]}
+                    if gen_config:
+                        kwargs["config"] = gen_config
+                    response = client.models.generate_content(**kwargs)
+                    text = response.text.strip() if response and response.text else ""
+                    if text:
+                        # Clean wrapping quotes if any
+                        if (text.startswith('"') and text.endswith('"')) or (text.startswith("'") and text.endswith("'")):
+                            text = text[1:-1].strip()
+                        return text
+                except Exception as e:
+                    err_str = str(e)
+                    print(f"[Notice: Gemini STT call with {model_name} failed: {err_str[:120]}]")
+                    if any(term in err_str.lower() for term in ["api_key_invalid", "unauthenticated", "permission_denied", "api key not valid", "403", "401", "invalid_argument", "connecterror", "getaddrinfo failed", "network is unreachable", "connection error"]):
+                        break
+                    continue
+        except Exception as e:
+            print(f"[Gemini transcribe_audio error]: {e}")
+        return ""
 
     def generate_response(
         self,
@@ -56,10 +130,11 @@ Your Responsibilities:
 3. If the user asks in Bengali or another language for help, explain the meaning in that language and show how to say it naturally in English.
 4. Continue the conversation by asking an engaging follow-up question related to the stage.
 5. Provide a constructive score for Fluency (0-100) and Grammar Accuracy (0-100).
+6. Memory & Continuity: Remember everything the user has shared in this conversation (their name, background, hobbies, past responses, mistakes) and reference them naturally like a real human tutor.
 
 You MUST respond strictly in valid JSON format with the following keys:
 {{
-  "reply": "Your verbal response as Ruku to the user (keep it concise, 2-3 sentences max, suitable for voice output)",
+  "reply": "Your verbal response as Ruku to the user (keep it concise, punchy, 1-2 short sentences, maximum 15-20 words, perfect for rapid speech playback)",
   "has_mistake": true/false,
   "original_mistake": "exact part of user's sentence with mistake or null",
   "correction": "corrected phrasing or null",
@@ -75,7 +150,7 @@ Do NOT output markdown backticks around the JSON. Output pure raw JSON.
         history_snippet = ""
         if chat_history and isinstance(chat_history, list):
             recent_turns = []
-            for item in chat_history[-6:]:
+            for item in chat_history[-14:]:
                 sender = item.get("sender") or item.get("role", "User")
                 text = item.get("text") or item.get("message", "")
                 if text:
@@ -90,6 +165,9 @@ Do NOT output markdown backticks around the JSON. Output pure raw JSON.
                 "gemini-flash-lite-latest",
                 "gemini-3.8-flash",
                 "gemini-flash-latest",
+                "gemini-2.5-flash",
+                "gemini-2.0-flash",
+                "gemini-1.5-flash",
                 "gemini-3.5-flash-lite",
                 "gemini-3.5-flash",
                 "gemini-3.7-flash"
@@ -101,22 +179,33 @@ Do NOT output markdown backticks around the JSON. Output pure raw JSON.
 
             prompt_content = f"{system_prompt}\n\n{history_snippet}User Message: \"{user_message}\""
 
+            chat_config = None
+            if hasattr(types, "GenerateContentConfig"):
+                try:
+                    chat_config = types.GenerateContentConfig(
+                        temperature=0.7,
+                        max_output_tokens=220
+                    )
+                except Exception:
+                    chat_config = None
+
             for model_name in valid_models:
                 try:
-                    response = client.models.generate_content(
-                        model=model_name,
-                        contents=prompt_content
-                    )
-                    text = response.text.strip()
+                    kwargs = {"model": model_name, "contents": prompt_content}
+                    if chat_config:
+                        kwargs["config"] = chat_config
+                    response = client.models.generate_content(**kwargs)
+                    text = response.text.strip() if response and response.text else ""
                     # Clean markdown fences or find JSON block
                     match = re.search(r"\{[\s\S]*\}", text)
                     if match:
                         return json.loads(match.group(0))
-                    return json.loads(text)
+                    if text:
+                        return json.loads(text)
                 except Exception as e:
                     err_str = str(e)
                     print(f"[Notice: Gemini API call with {model_name} failed: {err_str[:120]}]")
-                    if any(term in err_str.lower() for term in ["api_key_invalid", "unauthenticated", "permission_denied", "api key not valid", "403", "401", "invalid_argument"]):
+                    if any(term in err_str.lower() for term in ["api_key_invalid", "unauthenticated", "permission_denied", "api key not valid", "403", "401", "invalid_argument", "connecterror", "getaddrinfo failed", "network is unreachable", "connection error"]):
                         break
 
 

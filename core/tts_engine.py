@@ -14,9 +14,17 @@ VOICE_MAP = {
 }
 
 class RukuVoiceEngine:
-    def __init__(self, output_dir: str = "assets/audio_temp"):
+    def __init__(self, output_dir: Optional[str] = None):
+        if not output_dir:
+            if os.getenv("VERCEL"):
+                output_dir = "/tmp/audio_temp"
+            else:
+                output_dir = "assets/audio_temp"
         self.output_dir = output_dir
-        os.makedirs(self.output_dir, exist_ok=True)
+        try:
+            os.makedirs(self.output_dir, exist_ok=True)
+        except Exception:
+            pass
 
     async def generate_speech(self, text: str, language: str = "English", filename: Optional[str] = None) -> str:
         """
@@ -33,7 +41,7 @@ class RukuVoiceEngine:
         try:
             import edge_tts
             communicate = edge_tts.Communicate(text, voice)
-            await asyncio.wait_for(communicate.save(filepath), timeout=3.5)
+            await asyncio.wait_for(communicate.save(filepath), timeout=8.0)
             return f"/assets/audio_temp/{filename}"
         except Exception as e:
             print(f"[Notice] edge-tts fallback triggered ({e}). Using browser neural speech synthesis.")
