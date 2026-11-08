@@ -3,11 +3,15 @@
 > **"Talk with Ruku, Speak English with Confidence!"**  
 > An interactive, multilingual AI Avatar Companion for conversational English fluency, real-time grammar feedback, structured learning stages, and seamless PayPal checkout.
 
+[![Live Demo on Vercel](https://img.shields.io/badge/Live%20Demo-Vercel-black?logo=vercel&logoColor=white)](https://ruku-talk-ai.vercel.app)
 [![Built with Python](https://img.shields.io/badge/Built%20with-Python%203.10+-3776AB?logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Google Gemini](https://img.shields.io/badge/AI%20Brain-Google%20Gemini-8E75C4?logo=google&logoColor=white)](https://ai.google.dev)
 [![PayPal](https://img.shields.io/badge/Payments-PayPal%20Sandbox-00457C?logo=paypal&logoColor=white)](https://developer.paypal.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+🌐 **Live Production App:** [https://ruku-talk-ai.vercel.app](https://ruku-talk-ai.vercel.app)  
+🐙 **GitHub Repository:** [https://github.com/rokeyaag/ruku-talk-ai](https://github.com/rokeyaag/ruku-talk-ai)
 
 ---
 
