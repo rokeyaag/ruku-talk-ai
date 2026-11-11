@@ -232,6 +232,8 @@ let autoStopTimer = null;
 let isSubmittingSpeech = false;
 let isRukuSpeaking = false;
 let postSpeechCooldownTimer = null;
+let speechRecognition = null;
+let liveTranscribedText = "";
 
 // Adaptive Noise Calibration & Speech Tracking
 let ambientNoiseFloor = 10;
@@ -329,7 +331,46 @@ async function startRecording() {
     calibrationStartTime = Date.now();
     calibrationSamples = [];
     lastVADTimestamp = Date.now();
+    liveTranscribedText = "";
     isRecording = true;
+
+    // Start Browser Speech Recognition in parallel for instant client-side transcription
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+        try {
+            speechRecognition = new SpeechRecognition();
+            speechRecognition.continuous = true;
+            speechRecognition.interimResults = true;
+            speechRecognition.lang = getLanguageCode(currentLanguage);
+
+            speechRecognition.onresult = (event) => {
+                let finalStr = '';
+                let interimStr = '';
+                for (let i = 0; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalStr += event.results[i][0].transcript + ' ';
+                    } else {
+                        interimStr += event.results[i][0].transcript;
+                    }
+                }
+                const combined = (finalStr + interimStr).trim();
+                if (combined) {
+                    liveTranscribedText = (finalStr || combined).trim();
+                    speechEverDetected = true;
+                    silenceStartTimestamp = null;
+                    micHint.innerHTML = `<span style="color:var(--primary); font-weight:600;">🎙️ Hearing: "${combined}"</span>`;
+                }
+            };
+
+            speechRecognition.onerror = (err) => {
+                console.warn("Browser SpeechRecognition event:", err.error);
+            };
+
+            speechRecognition.start();
+        } catch (e) {
+            console.warn("SpeechRecognition start exception:", e);
+        }
+    }
 
     mediaRecorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) {
@@ -341,8 +382,9 @@ async function startRecording() {
         const mime = mediaRecorder.mimeType || 'audio/webm';
         const audioBlob = new Blob(audioChunks, { type: mime });
         audioChunks = [];
-        if (audioBlob.size > 500) {
-            await sendAudioToBackend(audioBlob);
+        const hasText = Boolean(liveTranscribedText && liveTranscribedText.trim().length > 0);
+        if (audioBlob.size > 200 || hasText) {
+            await sendAudioToBackend(audioBlob, liveTranscribedText.trim());
         } else {
             isSubmittingSpeech = false;
             stateText.innerText = "Ruku is ready to listen";
@@ -467,6 +509,12 @@ function stopRecording(shouldTranscribe = true) {
         vadAnimFrame = null;
     }
 
+    if (speechRecognition) {
+        try {
+            speechRecognition.stop();
+        } catch (e) {}
+    }
+
     isRecording = false;
     micBtn.classList.remove("recording");
     audioVisualizer.classList.remove("active");
@@ -489,7 +537,7 @@ function stopRecording(shouldTranscribe = true) {
     }
 }
 
-async function sendAudioToBackend(audioBlob) {
+async function sendAudioToBackend(audioBlob, clientText = "") {
     if (isSubmittingSpeech) return;
     isSubmittingSpeech = true;
 
@@ -502,6 +550,9 @@ async function sendAudioToBackend(audioBlob) {
         formData.append("language", currentLanguage);
         formData.append("stage_json", JSON.stringify(currentStage || {}));
         formData.append("chat_history_json", JSON.stringify(conversationHistory || []));
+        if (clientText) {
+            formData.append("client_text", clientText);
+        }
 
         const res = await fetch("/api/voice-chat", {
             method: "POST",

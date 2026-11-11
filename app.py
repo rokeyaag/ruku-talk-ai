@@ -227,11 +227,12 @@ async def voice_chat(
     audio: UploadFile = File(...),
     language: str = Form("English"),
     stage_json: str = Form("{}"),
-    chat_history_json: str = Form("[]")
+    chat_history_json: str = Form("[]"),
+    client_text: Optional[str] = Form(None)
 ):
     """
     Unified Single-Roundtrip Voice Chat Pipeline:
-    1. Transcribes incoming microphone speech via Gemini Multimodal Audio Perception.
+    1. Transcribes incoming microphone speech via Browser Native STT or Gemini Multimodal Audio Perception.
     2. Immediately evaluates grammar, scores fluency, and crafts conversational reply.
     3. Synthesizes Ruku's neural audio response in parallel.
     4. Persists the turn to chat logs.
@@ -239,20 +240,21 @@ async def voice_chat(
     """
     try:
         content = await audio.read()
-        if not content or len(content) < 300:
+        has_client_text = bool(client_text and client_text.strip())
+        if (not content or len(content) < 300) and not has_client_text:
             return JSONResponse({
                 "success": False,
                 "error": "Audio recording too short. Please hold the mic and speak clearly."
             })
 
         # Detect real mime type from magic bytes
-        if content[:4] == b"RIFF":
+        if content and len(content) >= 4 and content[:4] == b"RIFF":
             real_mime = "audio/wav"
-        elif content[:4] == b"\x1aE\xdf\xa3":
+        elif content and len(content) >= 4 and content[:4] == b"\x1aE\xdf\xa3":
             real_mime = "audio/webm"
-        elif content[:4] == b"\xff\xfb" or content[:3] == b"ID3":
+        elif content and (content[:4] == b"\xff\xfb" or content[:3] == b"ID3"):
             real_mime = "audio/mp3"
-        elif len(content) > 8 and content[4:8] == b"ftyp":
+        elif content and len(content) > 8 and content[4:8] == b"ftyp":
             real_mime = "audio/mp4"
         else:
             real_mime = audio.content_type or "audio/webm"
@@ -268,16 +270,19 @@ async def voice_chat(
         except Exception:
             chat_history = []
 
-        # 1. Multimodal Audio Transcription
-        recognized_text = ""
-        try:
-            recognized_text = tutor_engine.transcribe_audio(content, language=language, mime_type=real_mime)
-        except Exception as stt_err:
-            print(f"[Voice-Chat STT Error]: {stt_err}")
-            recognized_text = ""
+        # 1. Spoken Speech Transcription (Browser Native Web Speech or Multimodal Audio AI)
+        user_text = (client_text or "").strip()
+
+        # If client-side speech recognition didn't provide text, use server STT
+        if not user_text and content and len(content) >= 300:
+            try:
+                user_text = tutor_engine.transcribe_audio(content, language=language, mime_type=real_mime)
+            except Exception as stt_err:
+                print(f"[Voice-Chat STT Error]: {stt_err}")
+                user_text = ""
 
         # Fallback to Google STT if WAV
-        if not recognized_text and (real_mime == "audio/wav" or content[:4] == b"RIFF"):
+        if not user_text and content and (real_mime == "audio/wav" or (len(content) >= 4 and content[:4] == b"RIFF")):
             try:
                 recognizer = sr.Recognizer()
                 recognizer.dynamic_energy_threshold = False
@@ -286,23 +291,23 @@ async def voice_chat(
                 with sr.AudioFile(audio_file) as source:
                     audio_data = recognizer.record(source)
                 lang_code = LANGUAGE_STT_MAP.get(language, "en-US")
-                recognized_text = recognizer.recognize_google(audio_data, language=lang_code)
+                user_text = recognizer.recognize_google(audio_data, language=lang_code)
             except Exception:
-                recognized_text = ""
+                user_text = ""
 
         # Filter noise artifacts
-        clean_check = recognized_text.strip().lower()
+        clean_check = user_text.strip().lower()
         noise_tokens = ["<noise>", "[noise]", "<silence>", "[silence]", "0:00", "00", "0", "...", "noise", "silence", "undefined"]
         if clean_check in noise_tokens or not any(c.isalpha() for c in clean_check):
-            recognized_text = ""
+            user_text = ""
 
-        if not recognized_text or not recognized_text.strip():
+        if not user_text or not user_text.strip():
             return JSONResponse({
                 "success": False,
                 "error": "Could not catch clear words. Please speak a little louder or closer to your microphone."
             })
 
-        user_text = recognized_text.strip()
+        user_text = user_text.strip()
         print(f"[Voice-Chat Detected] ({language}): '{user_text}'")
 
         # 2. Anti-Echo Speaker Bleed Filter: Prevent Ruku talking to herself
