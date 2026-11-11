@@ -230,8 +230,38 @@ let micStream = null;
 let vadAnimFrame = null;
 let autoStopTimer = null;
 let isSubmittingSpeech = false;
+let isRukuSpeaking = false;
+let postSpeechCooldownTimer = null;
+
+// Adaptive Noise Calibration & Speech Tracking
+let ambientNoiseFloor = 10;
+let isCalibratingNoise = false;
+let calibrationStartTime = 0;
+let calibrationSamples = [];
 let speechEverDetected = false;
+let totalSpeechMs = 0;
+let lastVADTimestamp = 0;
 let silenceStartTimestamp = null;
+
+function stopRukuSpeech() {
+    if (postSpeechCooldownTimer) {
+        clearTimeout(postSpeechCooldownTimer);
+        postSpeechCooldownTimer = null;
+    }
+    if (rukuAudio) {
+        try {
+            rukuAudio.pause();
+            rukuAudio.currentTime = 0;
+        } catch (e) {}
+    }
+    if ('speechSynthesis' in window) {
+        try {
+            window.speechSynthesis.cancel();
+        } catch (e) {}
+    }
+    isRukuSpeaking = false;
+    stopLipSync();
+}
 
 function getLanguageCode(lang) {
     const map = {
@@ -248,7 +278,7 @@ function getLanguageCode(lang) {
 }
 
 async function startRecording() {
-    if (isRecording || isSubmittingSpeech) return;
+    if (isRecording || isSubmittingSpeech || isRukuSpeaking) return;
 
     unlockAudio();
 
@@ -262,7 +292,7 @@ async function startRecording() {
             audio: {
                 channelCount: 1,
                 echoCancellation: true,
-                noiseSuppression: false, // Critical: preserves soft speech, consonants, and accents
+                noiseSuppression: true,
                 autoGainControl: true
             }
         };
@@ -293,7 +323,12 @@ async function startRecording() {
 
     audioChunks = [];
     speechEverDetected = false;
+    totalSpeechMs = 0;
     silenceStartTimestamp = null;
+    isCalibratingNoise = true;
+    calibrationStartTime = Date.now();
+    calibrationSamples = [];
+    lastVADTimestamp = Date.now();
     isRecording = true;
 
     mediaRecorder.ondataavailable = (e) => {
@@ -321,7 +356,7 @@ async function startRecording() {
     // UI Updates
     micBtn.classList.add("recording");
     audioVisualizer.classList.add("active");
-    micHint.innerHTML = `<span style="color:var(--primary); font-weight:600;">🎙️ Listening... (Speak freely, pauses auto-submit)</span>`;
+    micHint.innerHTML = `<span style="color:var(--primary); font-weight:600;">🎙️ Listening... (Calibrating room audio)</span>`;
     stateText.innerText = "Ruku is listening carefully...";
 
     // AudioContext strictly for VAD & Visualizer (no loopback to speakers!)
@@ -351,27 +386,57 @@ async function startRecording() {
                 bar.style.height = `${height}px`;
             });
 
-            // Calculate average speech volume
-            let sum = 0;
-            for (let i = 0; i < dataArray.length; i++) {
-                sum += dataArray[i];
+            // Focus on human vocal formant frequency bins (bins 1 to 8, ~300Hz-3500Hz)
+            let voiceSum = 0;
+            let voiceBinsCount = 0;
+            for (let i = 1; i <= 8 && i < dataArray.length; i++) {
+                voiceSum += dataArray[i];
+                voiceBinsCount++;
             }
-            const avgVol = sum / dataArray.length;
+            const voiceBandEnergy = voiceBinsCount > 0 ? (voiceSum / voiceBinsCount) : 0;
 
-            // VAD logic: detect voice activity
-            if (avgVol > 7) {
-                speechEverDetected = true;
+            const now = Date.now();
+            const dt = Math.min(100, Math.max(1, now - lastVADTimestamp));
+            lastVADTimestamp = now;
+
+            // Phase 1: Calibrate ambient noise floor for first 300ms
+            if (isCalibratingNoise) {
+                calibrationSamples.push(voiceBandEnergy);
+                if (now - calibrationStartTime >= 300) {
+                    isCalibratingNoise = false;
+                    const sum = calibrationSamples.reduce((a, b) => a + b, 0);
+                    const measured = sum / (calibrationSamples.length || 1);
+                    ambientNoiseFloor = Math.max(6, Math.min(26, measured));
+                    micHint.innerHTML = `<span style="color:var(--primary); font-weight:600;">🎙️ Listening... (Speak freely, pauses auto-submit)</span>`;
+                }
+                vadAnimFrame = requestAnimationFrame(vadLoop);
+                return;
+            }
+
+            // Phase 2: Dynamic threshold based on calibrated ambient room noise
+            const voiceThreshold = Math.max(13, ambientNoiseFloor + 8);
+
+            if (voiceBandEnergy > voiceThreshold) {
+                totalSpeechMs += dt;
+                if (totalSpeechMs >= 250) {
+                    // Genuine sustained speech confirmed (avoids mic pop / click triggers)
+                    speechEverDetected = true;
+                }
                 silenceStartTimestamp = null;
                 micHint.innerHTML = `<span style="color:var(--primary); font-weight:600;">🎙️ Hearing you speak...</span>`;
             } else if (speechEverDetected) {
-                const now = Date.now();
                 if (!silenceStartTimestamp) {
                     silenceStartTimestamp = now;
-                } else if (now - silenceStartTimestamp > 800) {
-                    // 800ms natural conversational pause detected -> auto submit!
-                    micHint.innerHTML = `<span style="color:var(--accent); font-weight:600;">⚡ Answer finished! Generating reply...</span>`;
-                    stopRecording(true);
-                    return;
+                } else {
+                    const silenceDuration = now - silenceStartTimestamp;
+                    if (silenceDuration > 1300) {
+                        // 1.3 seconds natural conversational pause detected -> submit!
+                        micHint.innerHTML = `<span style="color:var(--accent); font-weight:600;">⚡ Answer finished! Generating reply...</span>`;
+                        stopRecording(true);
+                        return;
+                    } else if (silenceDuration > 600) {
+                        micHint.innerHTML = `<span style="color:var(--text-muted); font-weight:500;">🎙️ Pausing... (${Math.ceil((1300 - silenceDuration)/1000)}s)</span>`;
+                    }
                 }
             }
 
@@ -379,13 +444,13 @@ async function startRecording() {
         }
         vadAnimFrame = requestAnimationFrame(vadLoop);
 
-        // Safety limit: 12 seconds auto stop
+        // Safety limit: 14 seconds auto stop
         if (autoStopTimer) clearTimeout(autoStopTimer);
         autoStopTimer = setTimeout(() => {
             if (isRecording) {
                 stopRecording(true);
             }
-        }, 12000);
+        }, 14000);
 
     } catch (e) {
         console.warn("VAD init warning:", e);
@@ -474,6 +539,19 @@ async function sendAudioToBackend(audioBlob) {
             } else {
                 speakRukuText(data.reply);
             }
+        } else if (data && data.is_echo) {
+            // Anti-Echo Protection: Microphone captured Ruku's own speaker output
+            micHint.innerHTML = `<span style="color:var(--warning); font-weight:600;">⚠️ ${data.error || 'Echo filtered. Please speak your answer!'}</span>`;
+            stateText.innerText = "Ruku is ready to listen";
+
+            const handsFreeCheckbox = document.getElementById("handsFreeCheckbox");
+            if (handsFreeCheckbox && handsFreeCheckbox.checked) {
+                setTimeout(() => {
+                    if (!isRecording && !isSubmittingSpeech && !isRukuSpeaking) {
+                        startRecording();
+                    }
+                }, 1400);
+            }
         } else {
             const errMsg = data.error || "Could not catch clear words. Please click mic and speak closer.";
             micHint.innerHTML = `<span style="color:var(--warning); font-weight:600;">⚠️ ${errMsg}</span>`;
@@ -483,10 +561,10 @@ async function sendAudioToBackend(audioBlob) {
             const handsFreeCheckbox = document.getElementById("handsFreeCheckbox");
             if (handsFreeCheckbox && handsFreeCheckbox.checked) {
                 setTimeout(() => {
-                    if (!isRecording && !isSubmittingSpeech) {
+                    if (!isRecording && !isSubmittingSpeech && !isRukuSpeaking) {
                         startRecording();
                     }
-                }, 2000);
+                }, 2200);
             }
         }
     } catch (err) {
@@ -636,11 +714,22 @@ function unlockAudio() {
 }
 
 function playServerAudio(url, fallbackText = null) {
+    if (postSpeechCooldownTimer) {
+        clearTimeout(postSpeechCooldownTimer);
+        postSpeechCooldownTimer = null;
+    }
+
     if (!url) {
         if (fallbackText) speakRukuText(fallbackText);
         return;
     }
     
+    // Stop recording immediately if active to avoid capturing Ruku's voice
+    if (isRecording) {
+        stopRecording(false);
+    }
+
+    isRukuSpeaking = true;
     rukuAudio.src = url;
     rukuAudio.currentTime = 0;
     
@@ -652,6 +741,9 @@ function playServerAudio(url, fallbackText = null) {
             console.warn("Server audio playback failed or blocked by browser, falling back to speech synthesis:", err);
             if (fallbackText) {
                 speakRukuText(fallbackText);
+            } else {
+                isRukuSpeaking = false;
+                stopLipSync();
             }
         });
     } else {
@@ -661,6 +753,17 @@ function playServerAudio(url, fallbackText = null) {
 
 function speakRukuText(text) {
     if (!text || !('speechSynthesis' in window)) return;
+
+    if (postSpeechCooldownTimer) {
+        clearTimeout(postSpeechCooldownTimer);
+        postSpeechCooldownTimer = null;
+    }
+
+    if (isRecording) {
+        stopRecording(false);
+    }
+
+    isRukuSpeaking = true;
 
     try {
         if (window.speechSynthesis.paused) {
@@ -690,11 +793,13 @@ function speakRukuText(text) {
 
             utterance.onstart = () => startSimulatedLipSync();
             utterance.onend = () => {
+                isRukuSpeaking = false;
                 stopLipSync();
                 handlePostSpeechAutoListen();
             };
             utterance.onerror = (e) => {
                 console.warn("SpeechSynthesis error:", e);
+                isRukuSpeaking = false;
                 stopLipSync();
             };
 
@@ -705,6 +810,7 @@ function speakRukuText(text) {
             }
         } catch (err) {
             console.warn("speakRukuText exception:", err);
+            isRukuSpeaking = false;
             stopLipSync();
         }
     }, 60);
@@ -727,22 +833,36 @@ function startSimulatedLipSync() {
 function setupLipSync() {
     startSimulatedLipSync();
     rukuAudio.onended = () => {
+        isRukuSpeaking = false;
         stopLipSync();
         handlePostSpeechAutoListen();
     };
-    rukuAudio.onerror = () => stopLipSync();
+    rukuAudio.onerror = () => {
+        isRukuSpeaking = false;
+        stopLipSync();
+    };
 }
 
 function handlePostSpeechAutoListen() {
+    if (postSpeechCooldownTimer) {
+        clearTimeout(postSpeechCooldownTimer);
+        postSpeechCooldownTimer = null;
+    }
+
     const handsFreeCheckbox = document.getElementById("handsFreeCheckbox");
-    if (handsFreeCheckbox && handsFreeCheckbox.checked && !isRecording && !isSubmittingSpeech) {
-        stateText.innerText = "Ruku is listening for your answer...";
-        micHint.innerHTML = `<span style="color:var(--primary); font-weight:600;">🎙️ Your turn to speak! (Auto-listening...)</span>`;
-        setTimeout(() => {
-            if (!isRecording && !isSubmittingSpeech) {
+    if (handsFreeCheckbox && handsFreeCheckbox.checked && !isRecording && !isSubmittingSpeech && !isRukuSpeaking) {
+        stateText.innerText = "Ruku finished speaking. Waiting to listen...";
+        micHint.innerHTML = `<span style="color:var(--text-muted); font-size:12px;">Cooling down speakers...</span>`;
+
+        // 1000ms acoustic dissipation cooldown to completely silence speaker reverberation
+        postSpeechCooldownTimer = setTimeout(() => {
+            postSpeechCooldownTimer = null;
+            if (!isRecording && !isSubmittingSpeech && !isRukuSpeaking) {
+                stateText.innerText = "Ruku is listening for your answer...";
+                micHint.innerHTML = `<span style="color:var(--primary); font-weight:600;">🎙️ Your turn to speak! (Auto-listening...)</span>`;
                 startRecording();
             }
-        }, 700);
+        }, 1000);
     }
 }
 
@@ -760,6 +880,12 @@ function stopLipSync() {
 function setupEventListeners() {
     micBtn.addEventListener("click", async () => {
         unlockAudio();
+        // Barge-in: if Ruku is speaking, clicking mic interrupts her immediately
+        if (isRukuSpeaking) {
+            stopRukuSpeech();
+            await startRecording();
+            return;
+        }
         if (isRecording) {
             stopRecording(true);
         } else {

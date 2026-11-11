@@ -8,3 +8,5 @@ assets/audio_temp/*
 !assets/audio_temp/.gitkeep
 .vscode/
 .idea/
+
+.vercel

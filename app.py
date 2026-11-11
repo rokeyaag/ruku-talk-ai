@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 import speech_recognition as sr
-
+from difflib import SequenceMatcher
 
 from core.tutor_engine import RukuTutorEngine
 from core.tts_engine import RukuVoiceEngine
@@ -20,6 +20,44 @@ load_dotenv()
 app = FastAPI(title="RukuTalk AI", description="Multilingual Talking Avatar English Tutor")
 
 BASE_DIR = Path(__file__).resolve().parent
+
+# Anti-Echo Detection Utility
+def is_echo_of_ruku(user_text: str, candidate_ruku_texts: list) -> bool:
+    """
+    Detects if the microphone transcribed Ruku's own voice coming through laptop speakers.
+    Prevents self-reply audio echo feedback loops.
+    """
+    if not user_text:
+        return False
+    clean_user = "".join(c for c in user_text.lower() if c.isalnum() or c.isspace()).strip()
+    if len(clean_user) < 6:
+        return False
+    user_words = set(clean_user.split())
+
+    for ruku_text in candidate_ruku_texts:
+        if not ruku_text:
+            continue
+        clean_ruku = "".join(c for c in ruku_text.lower() if c.isalnum() or c.isspace()).strip()
+        if not clean_ruku:
+            continue
+        
+        # 1. Direct or partial substring matching
+        if len(clean_user) >= 14 and (clean_user in clean_ruku or clean_ruku in clean_user):
+            return True
+            
+        # 2. SequenceMatcher similarity ratio
+        sim = SequenceMatcher(None, clean_user, clean_ruku).ratio()
+        if sim > 0.60:
+            return True
+            
+        # 3. High word-overlap threshold
+        ruku_words = set(clean_ruku.split())
+        if len(user_words) >= 4 and len(ruku_words) >= 4:
+            overlap = len(user_words.intersection(ruku_words)) / len(user_words)
+            if overlap > 0.70:
+                return True
+                
+    return False
 
 # Serverless/Vercel Environment Handling
 IS_VERCEL = bool(os.getenv("VERCEL"))
@@ -267,7 +305,31 @@ async def voice_chat(
         user_text = recognized_text.strip()
         print(f"[Voice-Chat Detected] ({language}): '{user_text}'")
 
-        # 2. Generate Pedagogical Response
+        # 2. Anti-Echo Speaker Bleed Filter: Prevent Ruku talking to herself
+        candidate_ruku_texts = []
+        if stage_info.get("initial_ruku_message"):
+            candidate_ruku_texts.append(stage_info["initial_ruku_message"])
+        if isinstance(chat_history, list):
+            for item in reversed(chat_history):
+                if isinstance(item, dict):
+                    sender = (item.get("sender") or item.get("role") or "").lower()
+                    if sender == "ruku":
+                        candidate_ruku_texts.append(item.get("text") or item.get("message") or "")
+                        break
+        current_logs = get_chat_logs()
+        if current_logs:
+            candidate_ruku_texts.append(current_logs[-1].get("ruku", ""))
+
+        if is_echo_of_ruku(user_text, candidate_ruku_texts):
+            print(f"[Echo Filter Blocked] Microphone captured Ruku speaker echo: '{user_text}'")
+            return JSONResponse({
+                "success": False,
+                "is_echo": True,
+                "user_text": user_text,
+                "error": "Echo detected from speakers. Ruku ignored her own voice. Please speak your answer!"
+            })
+
+        # 3. Generate Pedagogical Response
         feedback = tutor_engine.generate_response(
             user_message=user_text,
             stage_info=stage_info,
