@@ -383,15 +383,26 @@ async function startRecording() {
         const audioBlob = new Blob(audioChunks, { type: mime });
         audioChunks = [];
         const hasText = Boolean(liveTranscribedText && liveTranscribedText.trim().length > 0);
+        const hasRealSpeech = hasText || (speechEverDetected && totalSpeechMs >= 380);
 
         // Only send to server if voice was actually detected or words were transcribed!
-        if (speechEverDetected || hasText) {
+        if (hasRealSpeech) {
             await sendAudioToBackend(audioBlob, liveTranscribedText.trim());
         } else {
             // Pure silence / no speech detected: quietly return to idle without error
             isSubmittingSpeech = false;
             stateText.innerText = "Ruku is ready to listen";
-            micHint.innerText = "Click the microphone when you are ready to speak";
+            const handsFreeCheckbox = document.getElementById("handsFreeCheckbox");
+            if (handsFreeCheckbox && handsFreeCheckbox.checked) {
+                micHint.innerHTML = `<span style="color:var(--primary); font-weight:500;">🎙️ Ruku is ready to listen. Speak when you're ready!</span>`;
+                setTimeout(() => {
+                    if (!isRecording && !isSubmittingSpeech && !isRukuSpeaking && handsFreeCheckbox.checked) {
+                        startRecording();
+                    }
+                }, 800);
+            } else {
+                micHint.innerText = "Click the microphone when you are ready to speak";
+            }
         }
     };
 
@@ -459,16 +470,18 @@ async function startRecording() {
             }
 
             // Phase 2: Dynamic threshold based on calibrated ambient room noise
-            const voiceThreshold = Math.max(13, ambientNoiseFloor + 8);
+            const voiceThreshold = Math.max(18, ambientNoiseFloor + 10);
 
             if (voiceBandEnergy > voiceThreshold) {
                 totalSpeechMs += dt;
-                if (totalSpeechMs >= 250) {
+                if (totalSpeechMs >= 380) {
                     // Genuine sustained speech confirmed (avoids mic pop / click triggers)
                     speechEverDetected = true;
                 }
                 silenceStartTimestamp = null;
-                micHint.innerHTML = `<span style="color:var(--primary); font-weight:600;">🎙️ Hearing you speak...</span>`;
+                if (!liveTranscribedText) {
+                    micHint.innerHTML = `<span style="color:var(--primary); font-weight:600;">🎙️ Hearing you speak...</span>`;
+                }
             } else if (speechEverDetected) {
                 if (!silenceStartTimestamp) {
                     silenceStartTimestamp = now;
@@ -493,7 +506,7 @@ async function startRecording() {
         if (autoStopTimer) clearTimeout(autoStopTimer);
         autoStopTimer = setTimeout(() => {
             if (isRecording) {
-                const hasVoice = speechEverDetected || Boolean(liveTranscribedText && liveTranscribedText.trim().length > 0);
+                const hasVoice = (speechEverDetected && totalSpeechMs >= 380) || Boolean(liveTranscribedText && liveTranscribedText.trim().length > 0);
                 stopRecording(hasVoice);
             }
         }, 12000);
@@ -606,11 +619,36 @@ async function sendAudioToBackend(audioBlob, clientText = "") {
                         startRecording();
                     }
                 }, 1400);
+            } else {
+                setTimeout(() => {
+                    if (!isRecording && !isSubmittingSpeech) {
+                        micHint.innerText = "Click the microphone when you are ready to speak";
+                    }
+                }, 3000);
+            }
+        } else if (data && data.no_speech) {
+            const handsFreeCheckbox = document.getElementById("handsFreeCheckbox");
+            if (handsFreeCheckbox && handsFreeCheckbox.checked) {
+                micHint.innerHTML = `<span style="color:var(--primary); font-weight:500;">🎙️ Ruku is ready to listen. Speak when you're ready!</span>`;
+                stateText.innerText = "Ruku is ready to listen";
+                setTimeout(() => {
+                    if (!isRecording && !isSubmittingSpeech && !isRukuSpeaking && handsFreeCheckbox.checked) {
+                        startRecording();
+                    }
+                }, 800);
+            } else {
+                micHint.innerText = "Click the microphone when you are ready to speak";
+                stateText.innerText = "Ruku is ready to listen";
             }
         } else {
             const errMsg = data.error || "Could not catch clear words. Please click mic and speak closer.";
             micHint.innerHTML = `<span style="color:var(--warning); font-weight:600;">⚠️ ${errMsg}</span>`;
             stateText.innerText = "Ruku is ready to listen";
+            setTimeout(() => {
+                if (!isRecording && !isSubmittingSpeech) {
+                    micHint.innerText = "Click the microphone when you are ready to speak";
+                }
+            }, 3500);
         }
     } catch (err) {
         console.error("Voice-chat connection error:", err);

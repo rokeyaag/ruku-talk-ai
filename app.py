@@ -304,6 +304,7 @@ async def voice_chat(
         if not user_text or not user_text.strip():
             return JSONResponse({
                 "success": False,
+                "no_speech": True,
                 "error": "Could not catch clear words. Please speak a little louder or closer to your microphone."
             })
 
