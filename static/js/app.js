@@ -383,12 +383,15 @@ async function startRecording() {
         const audioBlob = new Blob(audioChunks, { type: mime });
         audioChunks = [];
         const hasText = Boolean(liveTranscribedText && liveTranscribedText.trim().length > 0);
-        if (audioBlob.size > 200 || hasText) {
+
+        // Only send to server if voice was actually detected or words were transcribed!
+        if (speechEverDetected || hasText) {
             await sendAudioToBackend(audioBlob, liveTranscribedText.trim());
         } else {
+            // Pure silence / no speech detected: quietly return to idle without error
             isSubmittingSpeech = false;
             stateText.innerText = "Ruku is ready to listen";
-            micHint.innerText = "Click the microphone to speak with Ruku";
+            micHint.innerText = "Click the microphone when you are ready to speak";
         }
     };
 
@@ -486,13 +489,14 @@ async function startRecording() {
         }
         vadAnimFrame = requestAnimationFrame(vadLoop);
 
-        // Safety limit: 14 seconds auto stop
+        // Safety limit: 12 seconds auto stop
         if (autoStopTimer) clearTimeout(autoStopTimer);
         autoStopTimer = setTimeout(() => {
             if (isRecording) {
-                stopRecording(true);
+                const hasVoice = speechEverDetected || Boolean(liveTranscribedText && liveTranscribedText.trim().length > 0);
+                stopRecording(hasVoice);
             }
-        }, 14000);
+        }, 12000);
 
     } catch (e) {
         console.warn("VAD init warning:", e);
@@ -607,16 +611,6 @@ async function sendAudioToBackend(audioBlob, clientText = "") {
             const errMsg = data.error || "Could not catch clear words. Please click mic and speak closer.";
             micHint.innerHTML = `<span style="color:var(--warning); font-weight:600;">⚠️ ${errMsg}</span>`;
             stateText.innerText = "Ruku is ready to listen";
-            
-            // Allow retry in hands-free mode after brief pause
-            const handsFreeCheckbox = document.getElementById("handsFreeCheckbox");
-            if (handsFreeCheckbox && handsFreeCheckbox.checked) {
-                setTimeout(() => {
-                    if (!isRecording && !isSubmittingSpeech && !isRukuSpeaking) {
-                        startRecording();
-                    }
-                }, 2200);
-            }
         }
     } catch (err) {
         console.error("Voice-chat connection error:", err);
