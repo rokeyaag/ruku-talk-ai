@@ -294,8 +294,8 @@ async function startRecording() {
             audio: {
                 channelCount: 1,
                 echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true
+                noiseSuppression: false, // Prevents aggressive clipping of soft speech and consonants
+                autoGainControl: true   // Automatically amplifies quiet microphone levels
             }
         };
         micStream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -392,8 +392,8 @@ async function startRecording() {
         }
     };
 
-    // Clean single-container recording without timeslice fragmentation
-    mediaRecorder.start();
+    // Stream audio in 200ms slices for robust chunk assembly
+    mediaRecorder.start(200);
 
     // UI Updates
     micBtn.classList.add("recording");

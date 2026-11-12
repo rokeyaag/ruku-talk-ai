@@ -44,16 +44,12 @@ class RukuTutorEngine:
             return ""
 
         candidate_models = [
-            os.getenv("GEMINI_MODEL", "gemini-flash-lite-latest").strip(),
-            "gemini-flash-lite-latest",
+            os.getenv("GEMINI_MODEL", "gemini-3.5-flash").strip(),
+            "gemini-3.5-flash",
+            "gemini-3.5-flash-lite",
             "gemini-3.8-flash",
             "gemini-flash-latest",
-            "gemini-2.5-flash",
-            "gemini-2.0-flash",
-            "gemini-1.5-flash",
-            "gemini-3.5-flash-lite",
-            "gemini-3.5-flash",
-            "gemini-3.7-flash"
+            "gemini-flash-lite-latest"
         ]
         valid_models = []
         for m in candidate_models:
@@ -161,16 +157,12 @@ Do NOT output markdown backticks around the JSON. Output pure raw JSON.
         client = self._get_client()
         if client:
             candidate_models = [
-                os.getenv("GEMINI_MODEL", "gemini-flash-lite-latest").strip(),
-                "gemini-flash-lite-latest",
+                os.getenv("GEMINI_MODEL", "gemini-3.5-flash").strip(),
+                "gemini-3.5-flash",
+                "gemini-3.5-flash-lite",
                 "gemini-3.8-flash",
                 "gemini-flash-latest",
-                "gemini-2.5-flash",
-                "gemini-2.0-flash",
-                "gemini-1.5-flash",
-                "gemini-3.5-flash-lite",
-                "gemini-3.5-flash",
-                "gemini-3.7-flash"
+                "gemini-flash-lite-latest"
             ]
             valid_models = []
             for m in candidate_models:
